@@ -12,7 +12,9 @@ _formerly known as piStreamRadio._
 
 > **This is a fork** of [torch2424/live-stream-radio](https://github.com/torch2424/live-stream-radio), which was archived in 2022. It adds a built-in [web console](#web-console) for running your station from a browser, plus the fixes listed under [Changes in this fork](#changes-in-this-fork). Existing projects and `config.json` files work unchanged.
 
-> [!WARNING] > **🤖 AI SLOP ALERT 🤖** Everything added in this fork (the web console, the login system, the settings form, the bug fixes, and yes, this README) was written by an AI (Claude), with a human pointing at things and saying "do that". It has been run on exactly one Windows PC against the sample songs, and not yet on a real station. It might be fine. It might set your stream on fire. Read the code before you trust it with your stream key, and please open an issue when it inevitably does something dumb.
+<!-- prettier-ignore -->
+> [!WARNING]
+> **🤖 AI SLOP ALERT 🤖** Everything added in this fork (the web console, the login system, the settings form, the bug fixes, and yes, this README) was written by an AI (Claude), with a human pointing at things and saying "do that". It has been run on exactly one Windows PC against the sample songs, and not yet on a real station. It might be fine. It might set your stream on fire. Read the code before you trust it with your stream key, and please open an issue when it inevitably does something dumb.
 
 # Table of Contents
 
