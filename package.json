@@ -2,33 +2,34 @@
   "name": "live-stream-radio",
   "version": "2.2.1",
   "description": "24/7 live stream video radio station CLI / API",
-  "main": "index.js",
+  "main": "src/index.js",
   "bin": {
     "live-stream-radio": "./src/index.js"
   },
   "scripts": {
     "precommit": "pretty-quick --staged",
     "start": "node src/index.js live-stream-radio",
-    "generate": "rm -rf live-stream-radio && node src/index.js --generate",
+    "generate": "node -e \"require('fs-extra').removeSync('live-stream-radio')\" && node src/index.js --generate",
     "dev": "node src/index.js live-stream-radio --output dev.flv",
     "prettier": "npm run prettier:fix",
-    "lint": " echo \"Listing unlinted files, will show nothing if everything is fine.\" && npx prettier --config .prettierrc --list-different src/**/*.js",
-    "lint:fix": "npx prettier --config .prettierrc --write src/**/*.js",
+    "lint": "echo \"Listing unlinted files, will show nothing if everything is fine.\" && prettier --config .prettierrc --list-different \"src/**/*.js\" \"test/**/*.js\"",
+    "lint:fix": "prettier --config .prettierrc --write \"src/**/*.js\" \"test/**/*.js\"",
     "deploy": "npx np",
     "docz:dev": "docz dev",
     "docz:build": "docz build",
-    "docz:deploy": "npm run docz:build && gh-pages -d .docz/dist"
+    "docz:deploy": "npm run docz:build && gh-pages -d .docz/dist",
+    "test": "node --test \"test/*.test.js\""
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/torch2424/live-stream-radio.git"
+    "url": "git+https://github.com/dustinreeves/live-stream-radio.git"
   },
   "author": "Aaron Turner",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/torch2424/live-stream-radio/issues"
+    "url": "https://github.com/dustinreeves/live-stream-radio/issues"
   },
-  "homepage": "https://github.com/torch2424/live-stream-radio#readme",
+  "homepage": "https://github.com/dustinreeves/live-stream-radio#readme",
   "dependencies": {
     "chalk": "^2.4.1",
     "chalkline": "0.0.5",
