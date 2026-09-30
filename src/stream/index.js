@@ -23,6 +23,10 @@ let shouldListenForFfmpegErrors = false;
 // (e.g. on skip / restart), which used to be mistaken for the new track failing.
 let streamRun = 0;
 
+// A start scheduled by restart(). Only one can be pending, so quick repeated
+// skips / play-nows can't start two streams at once
+let pendingStartTimer = undefined;
+
 // Create our calbacks for stream end and error
 const errorCallback = (err, stdout, stderr) => {
   // Check if we should respond to the error
@@ -52,6 +56,10 @@ const endCallback = () => {
 // Create our exports
 const moduleExports = {
   start: async (path, getConfig, outputLocation) => {
+    // Starting now replaces any start a restart scheduled
+    clearTimeout(pendingStartTimer);
+    pendingStartTimer = undefined;
+
     console.log('\n');
     chalkLine.white();
     console.log('\n');
@@ -123,10 +131,26 @@ const moduleExports = {
     ffmpegCommandPromise = stream(currentPath, config, streamOutput, runEndCallback, runErrorCallback);
     await ffmpegCommandPromise;
   },
+  // Stop, then start again (with the next track) a second later
+  restart: async () => {
+    if (moduleExports.isRunning()) {
+      await moduleExports.stop();
+    }
+    clearTimeout(pendingStartTimer);
+    // Wrap in a set timeout, that way it wont crash and ffmpeg can continue
+    pendingStartTimer = setTimeout(() => {
+      pendingStartTimer = undefined;
+      moduleExports.start();
+    }, 1000);
+  },
   stop: async () => {
     console.log('\n');
     console.log(`${chalk.magenta('Stopping stream...')} ✋`);
     console.log('\n');
+
+    // A stop wins over a restart that hasn't started yet
+    clearTimeout(pendingStartTimer);
+    pendingStartTimer = undefined;
 
     shouldListenForFfmpegErrors = false;
     // Anything the current ffmpeg reports from now on is from a stream we stopped on purpose

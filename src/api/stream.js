@@ -76,14 +76,7 @@ module.exports = (fastify, path, stream, getConfig) => {
         return preCheckResponse;
       }
 
-      if (stream.isRunning()) {
-        await stream.stop();
-      }
-
-      // Wrap in a set timeout, that way it wont crash and ffmpeg can continue
-      setTimeout(() => {
-        stream.start();
-      }, 1000);
+      await stream.restart();
 
       reply.type('application/json').code(200);
       return {

@@ -9,6 +9,7 @@ const addStreamRoutes = require('./stream.js');
 const addConfigRoutes = require('./config.js');
 const addLibraryRoutes = require('./library.js');
 const addConsoleRoutes = require('./console.js');
+const addQueueRoutes = require('./queue.js');
 
 let currentStream;
 let currentGetConfig;
@@ -31,6 +32,7 @@ module.exports = {
     addConfigRoutes(fastify, path, currentStream, currentGetConfig);
     addLibraryRoutes(fastify, path, currentStream, currentGetConfig);
     addConsoleRoutes(fastify, path, currentStream, currentGetConfig);
+    addQueueRoutes(fastify, path, currentStream, currentGetConfig);
 
     const config = await getConfig();
 

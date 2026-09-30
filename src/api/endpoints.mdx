@@ -362,3 +362,48 @@ Signs in a web console user. Does not need the api key.
 ### Description
 
 Ends the session passed as `Authorization: Session <token>`.
+
+## GET /stream/queue
+
+### Description
+
+The tracks queued to play next, in order. When the queue is empty the stream picks tracks at random.
+
+### Example Successful Response:
+
+```
+{
+    "queue": [
+        { "path": "/home/me/my-radio/./audio/episode-12.mp3", "date": 1790000000000 }
+    ]
+}
+```
+
+## POST /stream/queue
+
+### Description
+
+Queues a track. Only files listed by `GET /library/audio` can be queued. Queued tracks skip interludes, and are marked `"requested": true` in the history.
+
+### Body Params
+
+* `path` - A path exactly as returned by `GET /library/audio`
+* `play_next` - (optional) `true` to put it at the front of the queue
+* `play_now` - (optional) `true` to put it at the front and skip to it straight away
+
+### Example Response:
+**HTTP 200** - The updated queue, as for `GET /stream/queue`
+**HTTP 400** - The track isn't in the library, or the queue is full (200 tracks)
+
+## POST /stream/queue/remove
+
+### Body Params
+
+* `index` - Position in the queue, from 0
+* `path` - (optional) Only remove it if this is still the track at `index`, otherwise **HTTP 409**
+
+## POST /stream/queue/clear
+
+### Description
+
+Empties the queue.

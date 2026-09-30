@@ -242,6 +242,32 @@
       .note.ok {
         color: var(--ok);
       }
+      .tracks li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .tracks .name {
+        flex: 1;
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .tracks button {
+        padding: 4px 10px;
+        font-size: 13px;
+        flex: none;
+      }
+      ol.tracks {
+        padding-left: 0;
+        counter-reset: queue;
+      }
+      ol.tracks li::before {
+        counter-increment: queue;
+        content: counter(queue);
+        color: var(--muted);
+        font-size: 12px;
+        min-width: 1.5em;
+      }
       .tabs {
         display: flex;
         flex-wrap: wrap;
@@ -398,6 +424,26 @@
           </div>
         </section>
 
+        <div class="grid" style="margin-bottom: 16px">
+          <section class="panel">
+            <h2>Up next <span id="queue-count" class="note"></span></h2>
+            <ol id="queue" class="list tracks"></ol>
+            <div class="row">
+              <button id="btn-clear-queue" type="button" class="danger">Clear queue</button>
+              <span class="note">When the queue is empty, tracks are picked at random.</span>
+            </div>
+          </section>
+          <section class="panel">
+            <h2>Library <span id="lib-count" class="note"></span></h2>
+            <input id="lib-filter" type="search" placeholder="Search episodes" />
+            <ul id="library" class="list tracks" style="margin-top: 10px"></ul>
+            <div class="row">
+              <button id="btn-lib" type="button">Load library</button>
+              <span id="lib-msg" class="note"></span>
+            </div>
+          </section>
+        </div>
+
         <div class="grid">
           <section class="panel">
             <h2>Recently played</h2>
@@ -432,14 +478,6 @@
           </div>
         </section>
 
-        <section class="panel">
-          <h2>Library <span id="lib-count" class="note"></span></h2>
-          <input id="lib-filter" type="search" placeholder="Filter by file name" />
-          <ul id="library" class="list" style="margin-top: 10px"></ul>
-          <div class="row">
-            <button id="btn-lib" type="button">Load library</button>
-          </div>
-        </section>
       </div>
     </main>
 
@@ -572,10 +610,10 @@
                 var li = document.createElement('li');
                 var title = document.createElement('div');
                 title.textContent = d.title;
-                if (item.type === 'interlude') {
+                if (item.type === 'interlude' || item.requested) {
                   var tag = document.createElement('span');
                   tag.className = 'tag';
-                  tag.textContent = 'interlude';
+                  tag.textContent = item.requested ? 'requested' : 'interlude';
                   title.appendChild(tag);
                 }
                 var when = document.createElement('div');
@@ -1063,19 +1101,98 @@
           $('config-msg').textContent = e.message;
         }
 
+        // ---- Queue ----
+        function trackName(path) {
+          return fileName(path).replace(/\.[^.]+$/, '');
+        }
+
+        function smallButton(label, onclick, className) {
+          var button = el('button', { type: 'button', text: label, className: className || '' });
+          button.onclick = onclick;
+          return button;
+        }
+
+        var lastQueueJson = null;
+        function renderQueue(queue) {
+          var json = JSON.stringify(queue);
+          if (json === lastQueueJson) return;
+          lastQueueJson = json;
+          var list = $('queue');
+          list.textContent = '';
+          queue.forEach(function(item, index) {
+            var remove = smallButton('Remove', function() {
+              remove.disabled = true;
+              // Send the path too, so a track that just started playing can't remove the wrong one
+              api('POST', '/stream/queue/remove', { index: index, path: item.path })
+                .then(function(data) {
+                  renderQueue(data.queue);
+                })
+                .catch(function(e) {
+                  $('lib-msg').textContent = e.message;
+                  refreshQueue();
+                });
+            });
+            list.appendChild(el('li', {}, [el('span', { className: 'name', text: trackName(item.path), title: item.path }), remove]));
+          });
+          if (!queue.length) {
+            list.appendChild(el('li', { className: 'note', text: 'Nothing queued. Pick episodes from the library.' }));
+          }
+          $('queue-count').textContent = queue.length ? '(' + queue.length + ')' : '';
+          $('btn-clear-queue').disabled = !queue.length;
+        }
+
+        function refreshQueue() {
+          return api('GET', '/stream/queue').then(function(data) {
+            renderQueue(data.queue);
+          });
+        }
+
+        function queueTrack(path, playNow) {
+          if (playNow && !$('btn-skip').disabled && !confirm('Stop the current track and play "' + trackName(path) + '" now?')) return;
+          api('POST', '/stream/queue', { path: path, play_now: playNow })
+            .then(function(data) {
+              renderQueue(data.queue);
+              $('lib-msg').className = 'note ok';
+              $('lib-msg').textContent = playNow ? 'Starting "' + trackName(path) + '"…' : 'Queued "' + trackName(path) + '"';
+              if (playNow) setTimeout(tick, 2500);
+            })
+            .catch(function(e) {
+              $('lib-msg').className = 'note bad';
+              $('lib-msg').textContent = e.message;
+            });
+        }
+
+        $('btn-clear-queue').onclick = function() {
+          if (!confirm('Remove everything from the queue?')) return;
+          api('POST', '/stream/queue/clear', {}).then(function(data) {
+            renderQueue(data.queue);
+          });
+        };
+
         // ---- Library ----
         function renderLibrary() {
           var filter = $('lib-filter').value.toLowerCase();
           var list = $('library');
           list.textContent = '';
           var shown = libraryFiles.filter(function(f) {
-            return !filter || f.toLowerCase().indexOf(filter) !== -1;
+            return !filter || fileName(f).toLowerCase().indexOf(filter) !== -1;
           });
           shown.slice(0, 500).forEach(function(f) {
-            var li = document.createElement('li');
-            li.textContent = fileName(f);
-            li.title = f;
-            list.appendChild(li);
+            list.appendChild(
+              el('li', {}, [
+                el('span', { className: 'name', text: trackName(f), title: f }),
+                smallButton('Queue', function() {
+                  queueTrack(f, false);
+                }),
+                smallButton(
+                  'Play now',
+                  function() {
+                    queueTrack(f, true);
+                  },
+                  'primary'
+                )
+              ])
+            );
           });
           $('lib-count').textContent = libraryFiles.length
             ? '(' + (filter ? shown.length + ' of ' : '') + libraryFiles.length + ' files' + (shown.length > 500 ? ', first 500 shown' : '') + ')'
@@ -1106,7 +1223,7 @@
 
         function tick() {
           if (!auth) return;
-          var jobs = [refreshStatus(), refreshLog()];
+          var jobs = [refreshStatus(), refreshLog(), refreshQueue()];
           if (tickCount % 5 === 0) jobs.push(refreshHistory());
           tickCount++;
           Promise.all(jobs).catch(function(e) {
@@ -1126,8 +1243,10 @@
             $('app').classList.remove('hidden');
             lastLogId = 0;
             $('log').textContent = '';
+            lastQueueJson = null;
             tick();
             loadConfig().catch(showConfigError);
+            if (!libraryFiles.length) $('btn-lib').click();
             clearInterval(timer);
             timer = setInterval(tick, 2000);
           });

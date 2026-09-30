@@ -7,8 +7,10 @@ const progress = require('cli-progress');
 
 // Get our Services and helper fucntions
 const safeStrings = require('./safeStrings');
+const fs = require('fs');
 const historyService = require('../history.service');
 const statusService = require('../status.service');
+const queueService = require('../queue.service');
 const supportedFileTypes = require('../supportedFileTypes');
 const getRandomFileWithExtensionFromPath = require('./randomFile');
 const getOverlayTextString = require('./overlayText');
@@ -54,9 +56,27 @@ const getVideo = async (path, config, typeKey, errorCallback) => {
 
 // Function to start a stream
 module.exports = async (path, config, outputLocation, endCallback, errorCallback) => {
+  // A track requested from the web console plays before anything random, skipping interludes.
+  // Skip requests whose file has gone away (e.g. the audio folder changed)
+  let requestedSong = undefined;
+  while (queueService.hasTracks() && !requestedSong) {
+    const queued = queueService.take();
+    if (fs.existsSync(queued.path)) {
+      requestedSong = queued.path;
+    } else {
+      console.log(chalk.yellow(`Skipping a requested track that no longer exists: ${queued.path}`));
+    }
+  }
+
   // Find what type of stream we want, radio, interlude, etc...
   let typeKey = 'radio';
-  if (nextTypeKey) {
+  if (requestedSong) {
+    // The pre-rendered video may be for an interlude, only keep it if it's for radio
+    if (nextTypeKey && nextTypeKey !== 'radio') {
+      nextVideo = undefined;
+    }
+    nextTypeKey = undefined;
+  } else if (nextTypeKey) {
     typeKey = nextTypeKey;
     nextTypeKey = undefined;
   } else {
@@ -71,13 +91,12 @@ module.exports = async (path, config, outputLocation, endCallback, errorCallback
   console.log(chalk.magenta(`Finding audio... 🎤`));
   console.log('\n');
 
-  // Find a random song from the config directory
-  const randomSong = await getRandomFileWithExtensionFromPath(
-    supportedFileTypes.supportedAudioTypes,
-    `${path}${config[typeKey].audio_directory}`
-  );
+  // Find a random song from the config directory, unless one was requested
+  const randomSong =
+    requestedSong ||
+    (await getRandomFileWithExtensionFromPath(supportedFileTypes.supportedAudioTypes, `${path}${config[typeKey].audio_directory}`));
 
-  console.log(chalk.blue(`Playing the audio:`));
+  console.log(chalk.blue(requestedSong ? `Playing the requested audio:` : `Playing the audio:`));
   console.log(randomSong);
   console.log('\n');
 
@@ -389,7 +408,8 @@ module.exports = async (path, config, outputLocation, endCallback, errorCallback
 
   // Start some pre-rendering
   const preRenderTask = async () => {
-    nextTypeKey = getTypeKey(config);
+    // Requested tracks skip interludes, so don't prepare an interlude video while any are waiting
+    nextTypeKey = queueService.hasTracks() ? 'radio' : getTypeKey(config);
     nextVideo = await getVideo(path, config, nextTypeKey, errorCallback);
   };
   preRenderTask();
@@ -400,6 +420,7 @@ module.exports = async (path, config, outputLocation, endCallback, errorCallback
   statusService.clearProgress();
   historyService.addItemToHistory({
     type: typeKey,
+    requested: Boolean(requestedSong),
     audio: {
       path: randomSong,
       duration: metadata.format.duration,

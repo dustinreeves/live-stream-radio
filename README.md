@@ -40,7 +40,7 @@ A browser page, served by `live-stream-radio` itself, for running the station wi
 - **History** – the last 50 tracks and interludes.
 - **Live log** – the same output you'd see in the terminal or syslog.
 - **Stream settings** – edit the on-screen text (title, artist / album / song lines: wording, size, colours, position, scrolling), the overlay image, interludes, media folders, stream URL and key, and video / audio quality, all in a form. An _Advanced (JSON)_ tab edits the raw `config.json`.
-- **Library** – search the audio files the station can play.
+- **Library and queue** – search the audio files the station can play, and pick what plays: _Queue_ adds a track to _Up next_, _Play now_ switches to it straight away. Queued tracks play in order (skipping interludes), then the station goes back to random. The queue is kept in memory, so a restart clears it.
 
 Nothing extra to install: no build step and no new dependencies.
 

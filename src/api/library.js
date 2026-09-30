@@ -40,6 +40,13 @@ const getAllAudioWithMetadata = async (path, getConfig) => {
 
 // File to return all of our /radio/* routes
 module.exports = (fastify, path, stream, getConfig) => {
+  addLibraryRoutes(fastify, path, stream, getConfig);
+};
+
+// Also used by the queue routes, to only allow queueing files from the library
+module.exports.getAllAudio = getAllAudio;
+
+const addLibraryRoutes = (fastify, path, stream, getConfig) => {
   fastify.get(
     '/library/audio',
     authService.secureRouteHandler(getConfig, async (request, reply) => {
