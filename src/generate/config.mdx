@@ -35,6 +35,7 @@ This page will go in detail with every field of a projects `config.json`. If you
 | api.port | Port on which the API runs on. |
 | api.key | API Key used for authentication. This is basically your admin password, so keep it secret! |
 | api.number_of_history_items | Number of items to store in the streams history to get the last played songs. |
+| api.trust_proxy | Set to true when the api runs behind a reverse proxy (Caddy / nginx, see `proxy/`). Web console login lockouts then use the visitor address from the proxy's `X-Forwarded-For` header, instead of localhost. Leave it off otherwise. |
 | console.users | Web console users, as `{ "username": "...", "password_hash": "..." }`. Add them with `live-stream-radio --set-password [Project Directory]` rather than by hand. Once a user exists, an empty `api.key` no longer leaves the API open. |
 | console.session_hours | How long a web console sign-in lasts, in hours. Defaults to 12. |
 | radio.audio_directory | Path to your music. Check out the FAQ for supported file types. |

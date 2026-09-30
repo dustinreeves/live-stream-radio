@@ -2,6 +2,7 @@
 // Users live in config.json under console.users with pbkdf2 hashed passwords,
 // set them with: live-stream-radio --set-password [Project Directory]
 const crypto = require('crypto');
+const { isEnabled } = require('../configValues');
 
 const HASH_ITERATIONS = 150000;
 const HASH_DIGEST = 'sha256';
@@ -129,17 +130,37 @@ const login = async (config, username, password, address) => {
   return [200, { token: token, username: user.username, expires: expires }];
 };
 
-// fastify 1.x keeps the node request on .req
-const getAddress = request => {
+const isLoopback = address => {
+  return address === '127.0.0.1' || address === '::1' || address === '::ffff:127.0.0.1';
+};
+
+// The address a request came from. Behind a reverse proxy (api.trust_proxy) every request
+// arrives from localhost, so use the client address the proxy appends to X-Forwarded-For.
+// Only the last entry is trusted: that one was added by our proxy, earlier ones can be faked.
+const getAddress = (request, config) => {
+  // fastify 1.x keeps the node request on .req
   const raw = request.req || request.raw;
-  return (raw && raw.connection && raw.connection.remoteAddress) || 'unknown';
+  const address = (raw && raw.connection && raw.connection.remoteAddress) || 'unknown';
+
+  const forwardedFor = request.headers['x-forwarded-for'];
+  if (config.api && isEnabled(config.api.trust_proxy) && isLoopback(address) && typeof forwardedFor === 'string') {
+    const clientAddress = forwardedFor
+      .split(',')
+      .pop()
+      .trim();
+    if (clientAddress) {
+      return clientAddress;
+    }
+  }
+
+  return address;
 };
 
 const addRoutes = (fastify, path, stream, getConfig) => {
   fastify.post('/console/login', async (request, reply) => {
     const config = await getConfig();
     const body = request.body || {};
-    const address = getAddress(request);
+    const address = getAddress(request, config);
     const response = await login(config, body.username, body.password, address);
 
     if (response[0] === 200) {

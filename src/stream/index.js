@@ -18,6 +18,11 @@ let ffmpegCommandPromise = undefined;
 // Thus we want to make sure we don't call our error callback if so
 let shouldListenForFfmpegErrors = false;
 
+// Counts ffmpeg runs. Each run's callbacks only act while it is still the current run:
+// a killed ffmpeg can report its error after the next track has already started
+// (e.g. on skip / restart), which used to be mistaken for the new track failing.
+let streamRun = 0;
+
 // Create our calbacks for stream end and error
 const errorCallback = (err, stdout, stderr) => {
   // Check if we should respond to the error
@@ -101,8 +106,21 @@ const moduleExports = {
     // Listen for errors again
     shouldListenForFfmpegErrors = true;
 
+    // Only let this run's ffmpeg end or fail the stream while it is the current one
+    const run = ++streamRun;
+    const runEndCallback = () => {
+      if (run === streamRun) {
+        endCallback();
+      }
+    };
+    const runErrorCallback = (err, stdout, stderr) => {
+      if (run === streamRun) {
+        errorCallback(err, stdout, stderr);
+      }
+    };
+
     // Start the stream again
-    ffmpegCommandPromise = stream(currentPath, config, streamOutput, endCallback, errorCallback);
+    ffmpegCommandPromise = stream(currentPath, config, streamOutput, runEndCallback, runErrorCallback);
     await ffmpegCommandPromise;
   },
   stop: async () => {
@@ -111,6 +129,8 @@ const moduleExports = {
     console.log('\n');
 
     shouldListenForFfmpegErrors = false;
+    // Anything the current ffmpeg reports from now on is from a stream we stopped on purpose
+    streamRun++;
     if (ffmpegCommandPromise) {
       // Get our command, its pid, and kill it.
       const ffmpegCommand = await ffmpegCommandPromise;

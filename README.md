@@ -60,17 +60,36 @@ The console refuses to load until a console user or an `api.key` exists.
 
 ## Reaching it from another computer
 
-The console signs in with a password and then sends a session token with every request, so it must not be exposed over plain `http://` on the internet. Keep `api.host` as `localhost` and use one of:
+The console signs in with a password and then sends a session token with every request, so it must not be exposed over plain `http://` on the internet (the sign-in page warns you if it is). Keep `api.host` as `localhost` and use one of these.
 
-- **SSH tunnel** (simplest): from your own computer run `ssh -L 8000:localhost:8000 you@your-server`, then open `http://localhost:8000/console` while the tunnel is open.
-- **HTTPS reverse proxy**: put nginx / Caddy in front of the api port with a TLS certificate, and only proxy to `localhost`.
+### HTTPS with a reverse proxy (recommended)
+
+Ready-made configs are in [`proxy/`](./proxy). Each file has step-by-step instructions at the top.
+
+|                                          | Use it when                                    | Certificate                                 |
+| ---------------------------------------- | ---------------------------------------------- | ------------------------------------------- |
+| [`proxy/Caddyfile`](./proxy/Caddyfile)   | Nothing else is using ports 80 / 443. Easiest. | Automatic, Caddy gets and renews it         |
+| [`proxy/nginx.conf`](./proxy/nginx.conf) | nginx is already running on the server         | One `certbot --nginx` command, auto-renewed |
+
+Not sure? Check what's listening: `sudo ss -tlnp | grep -E ':(80|443) '`.
+
+In short:
+
+1. Point a DNS name (e.g. `radio.example.com`) at the server.
+2. Copy the config, replacing `radio.example.com` (and `8000` if you changed `api.port`).
+3. In `config.json`, add `"trust_proxy": true` to the `api` section, keeping `"host": "localhost"`, and restart `live-stream-radio`. Behind a proxy every request comes from localhost; this makes the login lockout use each visitor's real address (from `X-Forwarded-For`), so someone else guessing passwords can't lock you out. Only turn it on behind a proxy.
+4. Open `https://radio.example.com`, which redirects to the console.
+
+### SSH tunnel
+
+No setup, good for occasional use: from your own computer run `ssh -L 8000:localhost:8000 you@your-server`, then open `http://localhost:8000/console` while the tunnel is open.
 
 ## When changes apply
 
 | Setting                                                               | Takes effect                                                                    |
 | --------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | On-screen text, image, interludes, folders, quality, stream URL / key | From the next track. _Save & apply now_ in the console skips to it immediately. |
-| `api.host`, `api.port`, `api.key`, `api.number_of_history_items`      | After restarting the process (e.g. `sudo systemctl restart my-radio.service`).  |
+| `api.host`, `api.port`, `api.number_of_history_items`                 | After restarting the process (e.g. `sudo systemctl restart my-radio.service`).  |
 | Console users and `console.session_hours`                             | On the next sign in.                                                            |
 
 Sessions last `console.session_hours` (default 12) and end if the process restarts. After 5 wrong passwords from one address, sign-ins from it are refused for 15 minutes.
@@ -85,6 +104,10 @@ _All AI-written, see the warning at the top._
 - **Config changes apply without a restart.** Before, `config.json` was cached when the process started, so edits (by hand or through `POST /config`) were ignored until a restart. It is now re-read at the start of every track, including the stream URL and key.
 - **`"false"` now means false.** On/off settings written as strings (the generated template ships `"enabled": "true"`) were always treated as on, so `"false"` did nothing. `true` / `false` and `"true"` / `"false"` now both work.
 - **Missing tags don't show "undefined".** Files with no artist or album tag skip that overlay line instead of showing `Artist: undefined`, and files with no title tag show their file name. Handy for podcast archives.
+- **Apostrophes can't crash the stream.** A `'` in the overlay title or in a track's tags broke ffmpeg's filter and stopped the stream. Overlay text is now passed to ffmpeg through a temp file, so any text works.
+- **Skipping can't crash the stream.** A skipped track's ffmpeg could report its (expected) kill after the next track had started, which was taken as the new track failing and shut the whole station down.
+- **Works with current ffmpeg and Node.** fluent-ffmpeg is updated and patched for the newer `ffmpeg -formats` layout (ffmpeg 6+), and font paths work on Windows.
+- **Reverse proxy configs** for Caddy and nginx, and `api.trust_proxy`.
 - **The stream key stays out of the logs.** It is replaced with `<stream_key>` in log output, since the log is visible in the web console.
 - **API keys are compared in constant time.**
 

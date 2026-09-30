@@ -354,6 +354,9 @@
     <main>
       <form id="login" class="panel hidden">
         <h1 style="margin-bottom: 12px">Radio Console</h1>
+        <p id="insecure" class="note bad hidden" style="margin-top: 0">
+          This connection isn't encrypted, so your password could be read on the way. Use HTTPS (see proxy/ in the project) or an SSH tunnel.
+        </p>
         <div id="login-user">
           <input id="username" type="text" placeholder="Username" autocomplete="username" autocapitalize="off" />
           <input id="password" type="password" placeholder="Password" autocomplete="current-password" style="margin-top: 8px" />
@@ -761,7 +764,13 @@
                   { p: 'api.host', t: 'text', l: 'Listen address', h: 'localhost = only this machine' },
                   { p: 'api.port', t: 'number', l: 'Port' },
                   { p: 'api.key', t: 'password', l: 'API key', wide: true, h: 'Leave set: with no key and no console users the API is open to anyone' },
-                  { p: 'api.number_of_history_items', t: 'number', l: 'History length' }
+                  { p: 'api.number_of_history_items', t: 'number', l: 'History length' },
+                  {
+                    p: 'api.trust_proxy',
+                    t: 'bool',
+                    l: 'Behind a reverse proxy (Caddy / nginx): use the visitor address it passes on',
+                    wide: true
+                  }
                 ]
               },
               {
@@ -1181,6 +1190,12 @@
             $('login-msg').textContent = e.message === 'Failed to fetch' ? 'Could not reach the console server.' : e.message;
           });
         };
+
+        // Plain http is only fine on this machine (or through an ssh tunnel, which also looks local)
+        var localHosts = ['localhost', '127.0.0.1', '[::1]', '::1'];
+        if (location.protocol === 'http:' && localHosts.indexOf(location.hostname) === -1) {
+          $('insecure').classList.remove('hidden');
+        }
 
         var saved = store.get();
         if (saved) {
