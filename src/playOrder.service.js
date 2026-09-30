@@ -6,7 +6,7 @@
 const fs = require('fs');
 const nodePath = require('path');
 
-const STATE_FILE_NAME = '.live-stream-radio-state.json';
+const STATE_FILE_NAME = '.podcast-radio-state.json';
 const PLAY_ORDERS = ['shuffle', 'in_order', 'random'];
 const DEFAULT_PLAY_ORDER = 'shuffle';
 

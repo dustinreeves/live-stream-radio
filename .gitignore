@@ -4,6 +4,7 @@
 # Generator testing
 **/myStream/**/*
 **/live-stream-radio/**/*
+**/podcast-radio/**/*
 
 # Stream Testing to a file
 **/*.flv

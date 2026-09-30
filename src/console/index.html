@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <title>Radio Console</title>
+    <title>Podcast Radio Console</title>
     <style>
       :root {
         --bg: #f6f6f4;
@@ -392,7 +392,7 @@
   <body>
     <main>
       <form id="login" class="panel hidden">
-        <h1 style="margin-bottom: 12px">Radio Console</h1>
+        <h1 style="margin-bottom: 12px">Podcast Radio Console</h1>
         <p id="insecure" class="note bad hidden" style="margin-top: 0">
           This connection isn't encrypted, so your password could be read on the way. Use HTTPS (see proxy/ in the project) or an SSH
           tunnel.
@@ -416,7 +416,7 @@
 
       <div id="app" class="hidden">
         <header>
-          <h1>Radio Console</h1>
+          <h1>Podcast Radio Console</h1>
           <span id="status" class="pill"><span class="dot"></span><span id="status-text">Connecting…</span></span>
           <span id="whoami" class="note"></span>
           <button id="signout" type="button">Sign out</button>
@@ -438,13 +438,30 @@
           </div>
         </section>
 
+        <section class="panel" style="margin-bottom: 16px">
+          <h2>Podcast feeds <span id="feeds-summary" class="note"></span></h2>
+          <ul id="feeds" class="list tracks"></ul>
+          <div class="row">
+            <input id="feed-url" type="url" placeholder="Podcast RSS feed URL" style="flex: 1; min-width: 220px" />
+            <label class="note" style="white-space: nowrap"
+              >Keep newest <input id="feed-keep" type="number" min="0" value="10" style="width: 70px"
+            /></label>
+            <button id="btn-add-feed" type="button" class="primary">Add feed</button>
+            <button id="btn-check-feeds" type="button">Check now</button>
+          </div>
+          <p id="feeds-msg" class="note" style="margin-bottom: 0">
+            New episodes are downloaded into a folder for each show, inside the audio folder, and join the rotation. Keep newest 0 keeps
+            every episode.
+          </p>
+        </section>
+
         <div class="grid" style="margin-bottom: 16px">
           <section class="panel">
             <h2>Up next <span id="queue-count" class="note"></span></h2>
             <ol id="queue" class="list tracks"></ol>
             <div class="row">
               <button id="btn-clear-queue" type="button" class="danger">Clear queue</button>
-              <span class="note">When the queue is empty, tracks are picked at random.</span>
+              <span class="note">When the queue is empty, episodes follow the play order (shuffle by default).</span>
             </div>
           </section>
           <section class="panel">
@@ -877,7 +894,7 @@
               },
               {
                 title: 'Console',
-                h: 'Add users or change passwords on the server with: live-stream-radio --set-password <project folder>',
+                h: 'Add users or change passwords on the server with: podcast-radio --set-password <project folder>',
                 fields: [{ p: 'console.session_hours', t: 'number', l: 'Stay signed in (hours)', ph: '12' }]
               }
             ]
@@ -1250,6 +1267,119 @@
           });
         };
 
+        // ---- Podcast feeds ----
+        function ago(iso) {
+          if (!iso) return 'never';
+          var minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+          if (minutes < 1) return 'just now';
+          if (minutes < 60) return minutes + ' min ago';
+          if (minutes < 60 * 48) return Math.round(minutes / 60) + ' h ago';
+          return Math.round(minutes / 1440) + ' days ago';
+        }
+
+        var feedsBusy = false;
+        var feedEpisodeTotal = null;
+
+        function renderFeeds(data) {
+          var list = $('feeds');
+          list.textContent = '';
+          data.feeds.forEach(function (feed) {
+            var details = [
+              feed.episodes + ' episode' + (feed.episodes === 1 ? '' : 's') + ' downloaded',
+              feed.keepLatest ? 'keeps newest ' + feed.keepLatest : 'keeps every episode',
+              'checked ' + ago(feed.lastChecked)
+            ];
+            if (feed.latest) details.push('latest: ' + feed.latest);
+            var remove = smallButton('Remove', function () {
+              if (
+                !confirm('Stop downloading "' + (feed.title || feed.url) + '"? Episodes already downloaded stay in ' + feed.directory + '.')
+              )
+                return;
+              api('POST', '/podcasts/feeds/remove', { url: feed.url })
+                .then(renderFeeds)
+                .catch(function (e) {
+                  feedsMessage(e.message, true);
+                });
+            });
+            list.appendChild(
+              el('li', {}, [
+                el('div', { className: 'name' }, [
+                  el('div', { text: feed.title || feed.url, title: feed.url }),
+                  el('div', { className: 'note', text: details.join(' · ') }),
+                  feed.lastError ? el('div', { className: 'note bad', text: feed.lastError }) : null
+                ]),
+                remove
+              ])
+            );
+          });
+          if (!data.feeds.length)
+            list.appendChild(el('li', { className: 'note', text: 'No feeds yet. Paste a podcast RSS feed URL below.' }));
+
+          var summary = '';
+          if (data.download) {
+            var percent = data.download.totalBytes ? ' ' + Math.floor((data.download.bytes / data.download.totalBytes) * 100) + '%' : '';
+            summary = '(downloading ' + data.download.title + percent + ')';
+          } else if (data.checking) {
+            summary = '(checking…)';
+          } else if (data.feeds.length) {
+            summary = '(checks every ' + data.checkEveryMinutes + ' min, last ' + ago(data.lastCheck) + ')';
+          }
+          $('feeds-summary').textContent = summary;
+          feedsBusy = Boolean(data.checking || data.download);
+
+          // New episodes arrived (or old ones were removed): show them in the library
+          var total = data.feeds.reduce(function (sum, feed) {
+            return sum + feed.episodes;
+          }, 0);
+          if (feedEpisodeTotal !== null && total !== feedEpisodeTotal && libraryFiles.length && !$('btn-lib').disabled)
+            $('btn-lib').click();
+          feedEpisodeTotal = total;
+        }
+
+        function feedsMessage(text, bad) {
+          $('feeds-msg').className = 'note' + (bad ? ' bad' : '');
+          $('feeds-msg').textContent = text;
+        }
+
+        function refreshFeeds() {
+          return api('GET', '/podcasts').then(renderFeeds);
+        }
+
+        $('btn-add-feed').onclick = function () {
+          var url = $('feed-url').value.trim();
+          if (!url) return;
+          $('btn-add-feed').disabled = true;
+          feedsMessage('Reading the feed…');
+          api('POST', '/podcasts/feeds', { url: url, keep_latest: $('feed-keep').value })
+            .then(function (data) {
+              $('feed-url').value = '';
+              feedsMessage(
+                'Added "' +
+                  data.feed.title +
+                  '" (' +
+                  data.feed.episodesInFeed +
+                  ' episodes in the feed). Downloading into ' +
+                  data.feed.directory +
+                  '…'
+              );
+              return refreshFeeds();
+            })
+            .catch(function (e) {
+              feedsMessage(e.message, true);
+            })
+            .then(function () {
+              $('btn-add-feed').disabled = false;
+            });
+        };
+
+        $('btn-check-feeds').onclick = function () {
+          api('POST', '/podcasts/check', {})
+            .then(renderFeeds)
+            .catch(function (e) {
+              feedsMessage(e.message, true);
+            });
+        };
+
         // ---- Library ----
         function renderLibrary() {
           var filter = $('lib-filter').value.toLowerCase();
@@ -1311,6 +1441,8 @@
           if (!auth) return;
           var jobs = [refreshStatus(), refreshLog(), refreshQueue()];
           if (tickCount % 5 === 0) jobs.push(refreshHistory());
+          // Every tick while downloading, so the progress moves
+          if (feedsBusy || tickCount % 5 === 0) jobs.push(refreshFeeds());
           tickCount++;
           Promise.all(jobs).catch(function (e) {
             if (e.message === 'unauthorized') return;

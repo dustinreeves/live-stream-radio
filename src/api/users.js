@@ -1,6 +1,6 @@
 // Username / password logins for the web console.
 // Users live in config.json under console.users with pbkdf2 hashed passwords,
-// set them with: live-stream-radio --set-password [Project Directory]
+// set them with: podcast-radio --set-password [Project Directory]
 const crypto = require('crypto');
 const { isEnabled } = require('../configValues');
 

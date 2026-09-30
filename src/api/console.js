@@ -14,7 +14,7 @@ module.exports = (fastify, path, stream, getConfig) => {
     if (!config.api.key && !usersService.hasUsers(config)) {
       reply.type('application/json').code(403);
       return {
-        message: 'Add a console user (live-stream-radio --set-password) or set api.key in your config.json to use the web console'
+        message: 'Add a console user (podcast-radio --set-password) or set api.key in your config.json to use the web console'
       };
     }
 

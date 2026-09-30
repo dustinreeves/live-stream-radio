@@ -16,7 +16,7 @@ const filterPath = filePath => {
 // and escaping them into the filter reliably is not possible across ffmpeg versions.
 // The file is read once when ffmpeg starts, so it's safe to overwrite for the next track.
 const writeTextFile = (key, text) => {
-  const textPath = nodePath.join(os.tmpdir(), `live-stream-radio-overlay-${process.pid}-${key}.txt`);
+  const textPath = nodePath.join(os.tmpdir(), `podcast-radio-overlay-${process.pid}-${key}.txt`);
   fs.writeFileSync(textPath, text);
   return textPath;
 };

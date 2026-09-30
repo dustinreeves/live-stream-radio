@@ -1,15 +1,16 @@
 {
-  "name": "live-stream-radio",
-  "version": "2.2.1",
-  "description": "24/7 live stream video radio station CLI / API",
+  "name": "podcast-radio",
+  "version": "3.0.0-vibe",
+  "description": "24/7 live stream for your podcasts: plays episodes over a video or image, with the episode info on screen, a web console and an API",
   "main": "src/index.js",
   "bin": {
+    "podcast-radio": "./src/index.js",
     "live-stream-radio": "./src/index.js"
   },
   "scripts": {
-    "start": "node src/index.js live-stream-radio",
-    "generate": "node -e \"require('fs-extra').removeSync('live-stream-radio')\" && node src/index.js --generate",
-    "dev": "node src/index.js live-stream-radio --output dev.flv",
+    "start": "node src/index.js podcast-radio",
+    "generate": "node -e \"require('fs-extra').removeSync('podcast-radio')\" && node src/index.js --generate",
+    "dev": "node src/index.js podcast-radio --output dev.flv",
     "prettier": "npm run lint:fix",
     "lint": "echo \"Listing unlinted files, will show nothing if everything is fine.\" && prettier --list-different \"src/**/*.js\" \"test/**/*.js\"",
     "lint:fix": "prettier --write \"src/**/*.js\" \"test/**/*.js\"",
@@ -18,17 +19,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dustinreeves/live-stream-radio.git"
+    "url": "git+https://github.com/dustinreeves/podcast-radio.git"
   },
   "author": "Aaron Turner",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/dustinreeves/live-stream-radio/issues"
+    "url": "https://github.com/dustinreeves/podcast-radio/issues"
   },
-  "homepage": "https://github.com/dustinreeves/live-stream-radio#readme",
+  "homepage": "https://github.com/dustinreeves/podcast-radio#readme",
   "dependencies": {
     "@fastify/formbody": "^9.0.0",
     "cli-progress": "^3.12.0",
+    "fast-xml-parser": "^5.11.2",
     "fastify": "^5.12.5",
     "fs-extra": "^11.4.1",
     "minimist": "^1.2.8",
@@ -48,5 +50,14 @@
     "proxy",
     "scripts",
     "README.md"
+  ],
+  "keywords": [
+    "podcast",
+    "livestream",
+    "radio",
+    "ffmpeg",
+    "youtube",
+    "twitch",
+    "rtmp"
   ]
 }

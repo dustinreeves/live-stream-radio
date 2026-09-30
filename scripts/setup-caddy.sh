@@ -2,7 +2,7 @@
 # Put a station's web console behind Caddy, with automatic HTTPS (Let's Encrypt).
 #
 # Run it on the server as the user that runs the stream (it uses sudo when needed):
-#   curl -fsSLO https://raw.githubusercontent.com/dustinreeves/live-stream-radio/master/scripts/setup-caddy.sh
+#   curl -fsSLO https://raw.githubusercontent.com/dustinreeves/podcast-radio/master/scripts/setup-caddy.sh
 #   bash setup-caddy.sh <domain> <project folder>
 # e.g.
 #   bash setup-caddy.sh radio.example.com ~/my-radio
@@ -43,7 +43,7 @@ case "$API_HOST" in
   localhost | 127.0.0.1 | ::1) ;;
   *) warn "api.host is '$API_HOST'. Set it to localhost so the console is only reachable through Caddy." ;;
 esac
-[ "$HAS_LOGIN" = true ] || warn "No api.key or console user is set: add one with live-stream-radio --set-password first."
+[ "$HAS_LOGIN" = true ] || warn "No api.key or console user is set: add one with podcast-radio --set-password first."
 
 SERVER_IP="$(ip -4 route get 1.1.1.1 2> /dev/null | sed -nE 's/.* src ([0-9.]+).*/\1/p')"
 DNS_IPS="$(getent ahostsv4 "$DOMAIN" 2> /dev/null | awk '{print $1}' | sort -u | tr '\n' ' ')"
@@ -69,7 +69,7 @@ command -v caddy > /dev/null || CADDY_INSTALLED=no
 
 # Only replace a Caddyfile that is the package default, never one with other sites in it
 CADDYFILE=/etc/caddy/Caddyfile
-if [ -f "$CADDYFILE" ] && ! grep -q 'root \* /usr/share/caddy' "$CADDYFILE" && ! grep -q "live-stream-radio" "$CADDYFILE"; then
+if [ -f "$CADDYFILE" ] && ! grep -q 'root \* /usr/share/caddy' "$CADDYFILE" && ! grep -qE "podcast-radio|live-stream-radio" "$CADDYFILE"; then
   die "$CADDYFILE already has your own sites in it, so this script won't replace it.
 Add this block to it by hand instead, then: sudo systemctl reload caddy
 
@@ -120,7 +120,7 @@ fi
 say "Writing $CADDYFILE"
 [ -f "$CADDYFILE" ] && sudo cp -a "$CADDYFILE" "$CADDYFILE.bak"
 sudo tee "$CADDYFILE" > /dev/null << EOF
-# live-stream-radio web console, written by setup-caddy.sh
+# podcast-radio web console, written by setup-caddy.sh
 $DOMAIN {
 	# The console lives at /console
 	redir / /console

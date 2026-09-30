@@ -5,28 +5,33 @@ route: /cli/usage
 ---
 
 # Usage
+
 ## Starting the stream
+
 Starts the stream.
 
-`live-stream-radio --start myStream`
+`podcast-radio --start myStream`
 
 **Shorthand:** -s
 
 You can also ommit the --start flag.
 
-`live-stream-radio myStream`
+`podcast-radio myStream`
 
 ## Help
-`live-stream-radio --help`
+
+`podcast-radio --help`
 
 **Shorthand:** -h
 
 ## Generate a project
-`live-stream-radio -generate myStream`
+
+`podcast-radio -generate myStream`
 
 **Shorthand:** -g
 
 ## Override Stream Output
+
 Overrides the stream_url/stream_key config. Useful for testing output and development.
 
-`live-stream-radio --output='rmtp://example.org'`
+`podcast-radio --output='rmtp://example.org'`
