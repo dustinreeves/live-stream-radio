@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs-extra');
 const os = require('os');
-const upath = require('upath');
+const nodePath = require('path');
 
 const usersService = require('../src/api/users');
 const authService = require('../src/api/auth');
@@ -11,7 +11,7 @@ const authService = require('../src/api/auth');
 const API_KEY = 'test-key-0123456789';
 
 const setUp = async (configChanges = {}) => {
-  const directory = await fs.mkdtemp(upath.join(os.tmpdir(), 'lsr-test-'));
+  const directory = await fs.mkdtemp(nodePath.join(os.tmpdir(), 'lsr-test-'));
   const config = Object.assign(
     {
       api: { key: API_KEY },
@@ -20,14 +20,14 @@ const setUp = async (configChanges = {}) => {
     },
     configChanges
   );
-  const configPath = upath.join(directory, 'config.json');
+  const configPath = nodePath.join(directory, 'config.json');
   await fs.writeJson(configPath, config);
-  await fs.outputFile(upath.join(directory, 'audio', 'song.mp3'), '');
+  await fs.outputFile(nodePath.join(directory, 'audio', 'song.mp3'), '');
 
   const getConfig = async () => fs.readJson(configPath);
   const stream = { isRunning: () => false };
   const fastify = require('fastify')();
-  fastify.register(require('fastify-formbody'));
+  fastify.register(require('@fastify/formbody'));
   const path = `${directory}/`;
   require('../src/api/config')(fastify, path, stream, getConfig);
   require('../src/api/console')(fastify, path, stream, getConfig);
@@ -121,7 +121,7 @@ test('only library tracks can be queued', async () => {
   assert.strictEqual(queued.status, 400);
 
   const library = require('../src/api/library');
-  const songPath = (await library.getAllAudio(`${directory}/`, async () => fs.readJson(upath.join(directory, 'config.json'))))[0];
+  const songPath = (await library.getAllAudio(`${directory}/`, async () => fs.readJson(nodePath.join(directory, 'config.json'))))[0];
   const ok = await inject({ method: 'POST', url: '/stream/queue', payload: { path: songPath } });
   assert.strictEqual(ok.status, 200);
   assert.strictEqual(ok.body.queue[ok.body.queue.length - 1].path, songPath);

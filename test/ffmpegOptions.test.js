@@ -35,22 +35,28 @@ test('stream duration pads both ends', () => {
   assert.strictEqual(ffmpegOptions.getStreamDuration(60.2), 67);
 });
 
-test('output options', () => {
+test('output options are ffmpeg arguments', () => {
   const options = ffmpegOptions.buildOutputOptions({ video_fps: '25', video_bit_rate: '2500k' }, 67);
-  ['-r 25', '-g 50', '-t 67', '-b:v 2500k', '-acodec aac', '-vcodec libx264'].forEach(option => {
-    assert.ok(options.indexOf(option) !== -1, option);
-  });
+  const pairs = {};
+  for (let i = 0; i < options.length; i += 2) {
+    pairs[options[i]] = options[i + 1];
+  }
+  assert.deepStrictEqual(
+    { r: pairs['-r'], g: pairs['-g'], t: pairs['-t'], bv: pairs['-b:v'], acodec: pairs['-acodec'], vcodec: pairs['-vcodec'] },
+    { r: '25', g: '50', t: '67', bv: '2500k', acodec: 'aac', vcodec: 'libx264' }
+  );
+  options.forEach(option => assert.strictEqual(typeof option, 'string'));
 });
 
 test('one output streams flv directly', () => {
-  assert.deepStrictEqual(ffmpegOptions.getOutputTarget('rtmp://a/live/key'), { location: 'rtmp://a/live/key', options: ['-f flv'] });
+  assert.deepStrictEqual(ffmpegOptions.getOutputTarget('rtmp://a/live/key'), { location: 'rtmp://a/live/key', options: ['-f', 'flv'] });
   assert.strictEqual(ffmpegOptions.getOutputTarget(['rtmp://a/live/key']).location, 'rtmp://a/live/key');
 });
 
 test('several outputs use the tee muxer', () => {
   const target = ffmpegOptions.getOutputTarget(['rtmp://a/live/1', 'rtmp://b/live/[2]|x']);
   assert.strictEqual(target.location, '[f=flv:onfail=ignore]rtmp://a/live/1|[f=flv:onfail=ignore]rtmp://b/live/\\[2\\]\\|x');
-  assert.deepStrictEqual(target.options, ['-flags +global_header', '-f tee']);
+  assert.deepStrictEqual(target.options, ['-flags', '+global_header', '-f', 'tee']);
 });
 
 test('no output is an error', () => {

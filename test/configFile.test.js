@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs-extra');
 const os = require('os');
-const upath = require('upath');
+const nodePath = require('path');
 const configFile = require('../src/configFile');
 
 const validConfig = () => ({
@@ -49,8 +49,8 @@ test('findConfigProblem', () => {
 });
 
 test('writes and reads config.json', async () => {
-  const directory = await fs.mkdtemp(upath.join(os.tmpdir(), 'lsr-test-'));
-  const configPath = upath.join(directory, 'config.json');
+  const directory = await fs.mkdtemp(nodePath.join(os.tmpdir(), 'lsr-test-'));
+  const configPath = nodePath.join(directory, 'config.json');
   await fs.writeJson(configPath, { old: true });
   await configFile.writeConfig(configPath, validConfig());
   assert.deepStrictEqual(await configFile.readConfig(configPath), validConfig());

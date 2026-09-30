@@ -7,7 +7,10 @@ test('plays in order, with play next going first', () => {
   queue.add('a.mp3');
   queue.add('b.mp3');
   queue.add('c.mp3', true);
-  assert.deepStrictEqual(queue.getQueue().map(item => item.path), ['c.mp3', 'a.mp3', 'b.mp3']);
+  assert.deepStrictEqual(
+    queue.getQueue().map(item => item.path),
+    ['c.mp3', 'a.mp3', 'b.mp3']
+  );
   assert.strictEqual(queue.take().path, 'c.mp3');
   assert.ok(queue.hasTracks());
 });

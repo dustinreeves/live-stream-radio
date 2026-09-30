@@ -1,15 +1,15 @@
 const authService = require('./auth');
-const upath = require('upath');
+const nodePath = require('path');
 const fs = require('fs-extra');
 const configFile = require('../configFile');
 
 const getFullConfig = async path => {
   // Return the current config
-  return [200, await configFile.readConfig(upath.join(path, 'config.json'))];
+  return [200, await configFile.readConfig(nodePath.join(path, 'config.json'))];
 };
 
 const getConfigByKey = async (path, key) => {
-  const config = await configFile.readConfig(upath.join(path, 'config.json'));
+  const config = await configFile.readConfig(nodePath.join(path, 'config.json'));
 
   // Return 200 if the key exists (even for values like false or 0) and 404 if it does not
   const configValue = configFile.getValue(config, key);
@@ -40,7 +40,7 @@ const changeConfig = async (path, key, value) => {
   }
 
   // Change config
-  const configPath = upath.join(path, 'config.json');
+  const configPath = nodePath.join(path, 'config.json');
   const config = await configFile.readConfig(configPath);
   const currentValue = configFile.getValue(config, key);
   configFile.setValue(config, key, newValue);
@@ -61,7 +61,7 @@ const replaceConfig = async (path, newConfig) => {
   }
 
   // Keep the previous version next to it, in case of a bad edit
-  const configPath = upath.join(path, 'config.json');
+  const configPath = nodePath.join(path, 'config.json');
   await fs.copy(configPath, `${configPath}.bak`);
   await configFile.writeConfig(configPath, newConfig);
 

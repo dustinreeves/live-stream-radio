@@ -1,8 +1,8 @@
-const chalk = require('chalk');
+const colors = require('../colors');
 const fastify = require('fastify')({});
 
 // www-form-urlencoded parser for fastify
-fastify.register(require('fastify-formbody'));
+fastify.register(require('@fastify/formbody'));
 
 // Get our routes
 const addStreamRoutes = require('./stream.js');
@@ -36,16 +36,8 @@ module.exports = {
 
     const config = await getConfig();
 
-    await new Promise((resolve, reject) => {
-      fastify.listen(config.api.port, config.api.host, (err, address) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        console.log('\n');
-        console.log(`${chalk.blue('API Started at:')} ${address}`);
-        resolve();
-      });
-    });
+    const address = await fastify.listen({ port: parseInt(config.api.port, 10), host: config.api.host || 'localhost' });
+    console.log('\n');
+    console.log(`${colors.blue('API Started at:')} ${address}`);
   }
 };

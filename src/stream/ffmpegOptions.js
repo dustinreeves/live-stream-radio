@@ -86,60 +86,72 @@ const getStreamDuration = songDuration => {
   return delayInSeconds * 2 + Math.ceil(songDuration);
 };
 
-// Create our ouput options
+// Create our ouput options, as ffmpeg arguments
 // Good starting point: https://wiki.archlinux.org/index.php/Streaming_to_twitch.tv
 const buildOutputOptions = (config, streamDuration) => {
   const fps = getFps(config);
 
   // Some defaults we don't want change
   const outputOptions = [
-    `-map [videooutput]`,
-    `-map [audiooutput]`,
+    '-map',
+    '[videooutput]',
+    '-map',
+    '[audiooutput]',
     // Our fps from earlier
-    `-r ${fps}`,
+    '-r',
+    String(fps),
     // Group of pictures, want to set to 2 seconds
     // https://trac.ffmpeg.org/wiki/EncodingForStreamingSites
     // https://www.addictivetips.com/ubuntu-linux-tips/stream-to-twitch-command-line-linux/
     // Best Explanation: https://superuser.com/questions/908280/what-is-the-correct-way-to-fix-keyframes-in-ffmpeg-for-dash
-    `-g ${parseInt(fps, 10) * 2}`,
-    `-keyint_min ${fps}`,
+    '-g',
+    String(parseInt(fps, 10) * 2),
+    '-keyint_min',
+    String(fps),
     // Stop audio once we hit the specified duration
-    `-t ${streamDuration}`,
+    '-t',
+    String(streamDuration),
     // https://trac.ffmpeg.org/wiki/EncodingForStreamingSites
-    `-pix_fmt yuv420p`
+    '-pix_fmt',
+    'yuv420p'
   ];
 
   if (config.video_bit_rate) {
-    outputOptions.push(`-b:v ${config.video_bit_rate}`);
-    outputOptions.push(`-minrate ${config.video_bit_rate}`);
-    outputOptions.push(`-maxrate ${config.video_bit_rate}`);
+    outputOptions.push(
+      '-b:v',
+      String(config.video_bit_rate),
+      '-minrate',
+      String(config.video_bit_rate),
+      '-maxrate',
+      String(config.video_bit_rate)
+    );
   }
 
   if (config.audio_bit_rate) {
-    outputOptions.push(`-b:a ${config.audio_bit_rate}`);
+    outputOptions.push('-b:a', String(config.audio_bit_rate));
   }
 
   if (config.audio_sample_rate) {
-    outputOptions.push(`-ar ${config.audio_sample_rate}`);
+    outputOptions.push('-ar', String(config.audio_sample_rate));
   }
 
   // Set our audio codec, this can drastically affect performance
-  outputOptions.push(`-acodec ${config.audio_codec || 'aac'}`);
+  outputOptions.push('-acodec', String(config.audio_codec || 'aac'));
 
   // Set our video codec, and encoder options
   // https://trac.ffmpeg.org/wiki/EncodingForStreamingSites
-  outputOptions.push(`-vcodec ${config.video_codec || 'libx264'}`);
+  outputOptions.push('-vcodec', String(config.video_codec || 'libx264'));
   if (config.preset) {
-    outputOptions.push(`-preset ${config.preset}`);
+    outputOptions.push('-preset', String(config.preset));
   }
   if (config.bufsize) {
-    outputOptions.push(`-bufsize ${config.bufsize}`);
+    outputOptions.push('-bufsize', String(config.bufsize));
   }
   if (config.crf) {
-    outputOptions.push(`-crf ${config.crf}`);
+    outputOptions.push('-crf', String(config.crf));
   }
   if (config.threads) {
-    outputOptions.push(`-threads ${config.threads}`);
+    outputOptions.push('-threads', String(config.threads));
   }
 
   return outputOptions;
@@ -151,7 +163,7 @@ const escapeTeeOutput = output => {
 };
 
 // Where to send the stream: one output, or several at once (e.g. YouTube and Twitch)
-// Returns the ffmpeg output location and the options that go with it
+// Returns the ffmpeg output location and the arguments that go with it
 const getOutputTarget = outputLocation => {
   const outputs = (Array.isArray(outputLocation) ? outputLocation : [outputLocation]).filter(output => {
     return typeof output === 'string' && output.length > 0;
@@ -163,14 +175,14 @@ const getOutputTarget = outputLocation => {
 
   // Set format to flv (Youtube/Twitch)
   if (outputs.length === 1) {
-    return { location: outputs[0], options: [`-f flv`] };
+    return { location: outputs[0], options: ['-f', 'flv'] };
   }
 
   // ffmpeg's tee muxer encodes once and sends to all of them. If one output fails
   // (onfail=ignore) the others keep going
   return {
     location: outputs.map(output => `[f=flv:onfail=ignore]${escapeTeeOutput(output)}`).join('|'),
-    options: [`-flags +global_header`, `-f tee`]
+    options: ['-flags', '+global_header', '-f', 'tee']
   };
 };
 

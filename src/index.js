@@ -14,23 +14,23 @@ const argv = require('minimist')(process.argv.slice(2), {
 
 // Check if we should print our usage
 if ((Object.keys(argv).length === 1 && argv._.length <= 0) || argv.help !== undefined) {
-  const chalk = require('chalk');
+  const colors = require('./colors');
   const pkg = require('../package.json');
 
   console.log(`
-${chalk.blue('USAGE:')} ${chalk.yellow(pkg.name)}
+${colors.blue('USAGE:')} ${colors.yellow(pkg.name)}
   
-  ${chalk.blue('--help, -h')} : Print this usage message.
-  ${chalk.blue('--version, -v')} : Print the current version of this installation.
-  ${chalk.blue('--generate, -g')} ${chalk.magenta('[Project Name/Directory]')} : Generate a new stream project,
+  ${colors.blue('--help, -h')} : Print this usage message.
+  ${colors.blue('--version, -v')} : Print the current version of this installation.
+  ${colors.blue('--generate, -g')} ${colors.magenta('[Project Name/Directory]')} : Generate a new stream project,
     in a directory with the Project name.
-  ${chalk.blue('--output, -o')} ${chalk.magenta('[Stream Output Location]')} : Override the 'stream_url/stream_key', 
+  ${colors.blue('--output, -o')} ${colors.magenta('[Stream Output Location]')} : Override the 'stream_url/stream_key', 
     in the config.json, and output to the location. 
     Helpful for testing output and development.
-  ${chalk.blue('--start, -s')} ${chalk.magenta('[Project Name/Directory]')} : Start the stream using the passed directory.
-  ${chalk.blue('--set-password')} ${chalk.magenta('[Project Name/Directory]')} : Add a web console user, or change
+  ${colors.blue('--start, -s')} ${colors.magenta('[Project Name/Directory]')} : Start the stream using the passed directory.
+  ${colors.blue('--set-password')} ${colors.magenta('[Project Name/Directory]')} : Add a web console user, or change
     their password, in the project's config.json.
-  ${chalk.yellow('Default:')}
+  ${colors.yellow('Default:')}
   Will assume the --start flag if no flag is passed.
   E.g 
   
@@ -67,8 +67,8 @@ if (argv['set-password'] !== undefined) {
 
 // Start the server
 const fs = require('fs');
-const upath = require('upath');
-const chalk = require('chalk');
+const nodePath = require('path');
+const colors = require('./colors');
 
 const historyService = require('./history.service');
 const authService = require('./api/auth');
@@ -78,12 +78,11 @@ const { isEnabled } = require('./configValues');
 require('./status.service').captureConsole();
 
 // Check if we passed in a base path, relative to where we are or absolute
-let path = upath.resolve(process.cwd(), (argv.start && argv.start.length > 0 && argv.start) || argv._[0] || '.');
+let path = nodePath.resolve(process.cwd(), (argv.start && argv.start.length > 0 && argv.start) || argv._[0] || '.');
 
 // Add a trailing slash to out path if there isn't one
-const lastPathChar = path.substr(-1);
-if (lastPathChar != '/') {
-  path += '/';
+if (!path.endsWith(nodePath.sep)) {
+  path += nodePath.sep;
 }
 
 // Keep using the last config that loaded, if an edit breaks it, rather than stopping the station
@@ -96,12 +95,12 @@ const useConfig = (config, source) => {
   return config;
 };
 const configFailed = (message, e) => {
-  console.log(`${chalk.red(message)} 😞`);
+  console.log(`${colors.red(message)} 😞`);
   console.log(e.message);
   if (!lastGoodConfig) {
     process.exit(1);
   }
-  console.log(chalk.yellow('Using the last config that worked until it is fixed.'));
+  console.log(colors.yellow('Using the last config that worked until it is fixed.'));
   return lastGoodConfig;
 };
 
@@ -111,7 +110,7 @@ const configJsPath = `${path}config.js`;
 let getConfig = undefined;
 // First check if we have a config.js
 if (fs.existsSync(configJsPath)) {
-  console.log(`${chalk.green('Using the config.js at:')} ${configJsPath}`);
+  console.log(`${colors.green('Using the config.js at:')} ${configJsPath}`);
   const configExport = require(configJsPath);
 
   // Wrap get config in all of our stateful service
@@ -128,7 +127,7 @@ if (fs.existsSync(configJsPath)) {
     }
   };
 } else if (fs.existsSync(configJsonPath)) {
-  console.log(`${chalk.magenta('Using the config.json at:')} ${configJsonPath}`);
+  console.log(`${colors.magenta('Using the config.json at:')} ${configJsonPath}`);
   // Simply set our config to a function that just returns the static config.json
   getConfig = async () => {
     try {
@@ -141,7 +140,7 @@ if (fs.existsSync(configJsPath)) {
   };
 } else {
   // Tell them could not find a config file
-  console.log(`${chalk.red('Error did not find a config.json at:')} ${configJsonPath} 😞`);
+  console.log(`${colors.red('Error did not find a config.json at:')} ${configJsonPath} 😞`);
   process.exit(1);
 }
 
@@ -157,13 +156,13 @@ const checkApiKey = config => {
   }
 
   if (!isLoopbackHost(config.api.host) || isEnabled(config.api.trust_proxy)) {
-    console.log(`${chalk.red('api.key in your config.json is still the example key "super-secret-api-key".')} 😟`);
+    console.log(`${colors.red('api.key in your config.json is still the example key "super-secret-api-key".')} 😟`);
     console.log('Anyone could control the stream with it. Change it (or remove it and add a console user) and start again.');
     process.exit(1);
   }
 
   console.log(
-    chalk.yellow('api.key in your config.json is still the example key. Change it before making the api reachable from other computers.')
+    colors.yellow('api.key in your config.json is still the example key. Change it before making the api reachable from other computers.')
   );
 };
 
@@ -186,6 +185,6 @@ const startRadioTask = async () => {
   await stream.start(path, getConfig, argv.output);
 };
 startRadioTask().catch(e => {
-  console.log(`${chalk.red('Could not start live-stream-radio:')} ${e.message} 😞`);
+  console.log(`${colors.red('Could not start live-stream-radio:')} ${e.message} 😞`);
   process.exit(1);
 });

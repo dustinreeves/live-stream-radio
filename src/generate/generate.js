@@ -1,8 +1,8 @@
 // Require our dependencies
-const chalk = require('chalk');
+const colors = require('../colors');
 const crypto = require('crypto');
 const fs = require('fs-extra');
-const upath = require('upath');
+const nodePath = require('path');
 
 module.exports = projectName => {
   // Add a default project name if none
@@ -11,25 +11,25 @@ module.exports = projectName => {
   }
 
   // Inform user of project creation
-  console.log('🎵', chalk.green('Generating a new pi-stream-radio project in:'), chalk.blue(projectName), '🎵');
+  console.log('🎵', colors.green('Generating a new pi-stream-radio project in:'), colors.blue(projectName), '🎵');
 
   // Create our new project directory, relative to where we are or absolute
-  const newProjectPath = upath.resolve(process.cwd(), projectName);
+  const newProjectPath = nodePath.resolve(process.cwd(), projectName);
   if (fs.existsSync(newProjectPath)) {
-    console.log(chalk.red(`${newProjectPath} already exists, please pick a new project name.`), '😞');
+    console.log(colors.red(`${newProjectPath} already exists, please pick a new project name.`), '😞');
     process.exit(1);
   }
 
   // Fill the project diretory with the template
-  console.log('📁', chalk.magenta(`Copying the template to ${newProjectPath} ...`));
-  fs.copySync(upath.join(__dirname, 'template'), newProjectPath);
+  console.log('📁', colors.magenta(`Copying the template to ${newProjectPath} ...`));
+  fs.copySync(nodePath.join(__dirname, 'template'), newProjectPath);
 
   // Every project gets its own api key, rather than one everyone knows
-  const configPath = upath.join(newProjectPath, 'config.json');
+  const configPath = nodePath.join(newProjectPath, 'config.json');
   const config = fs.readJsonSync(configPath);
   config.api.key = crypto.randomBytes(24).toString('hex');
   fs.writeJsonSync(configPath, config, { spaces: 2 });
-  console.log('🔑', chalk.magenta(`Generated a random api key, it is api.key in ${configPath}`));
+  console.log('🔑', colors.magenta(`Generated a random api key, it is api.key in ${configPath}`));
 
-  console.log(chalk.green(`Project created at: ${newProjectPath} !`), '🎉');
+  console.log(colors.green(`Project created at: ${newProjectPath} !`), '🎉');
 };

@@ -1,8 +1,8 @@
 const fs = require('fs-extra');
-const upath = require('upath');
+const nodePath = require('path');
 const usersService = require('./users');
 
-const consolePagePath = upath.join(__dirname, '..', 'console', 'index.html');
+const consolePagePath = nodePath.join(__dirname, '..', 'console', 'index.html');
 
 // Serves the web console page. The page itself holds no secrets,
 // it signs in with a console user (or the api key) and sends that with every api request.
@@ -19,11 +19,7 @@ module.exports = (fastify, path, stream, getConfig) => {
     }
 
     const page = await fs.readFile(consolePagePath);
-    reply
-      .type('text/html; charset=utf-8')
-      .header('Cache-Control', 'no-store')
-      .header('X-Frame-Options', 'DENY')
-      .code(200);
+    reply.type('text/html; charset=utf-8').header('Cache-Control', 'no-store').header('X-Frame-Options', 'DENY').code(200);
     return page;
   });
 };

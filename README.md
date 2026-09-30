@@ -6,7 +6,7 @@ _formerly known as piStreamRadio._
 
 [CLI Usage Screenshot](./docz/assets/CLIUsage.png) 🖼️
 
-[Documentation](https://torch2424.github.io/live-stream-radio/) 📚
+[Documentation](./src/index.mdx) 📚
 
 `live-stream-radio` is a 24/7 live stream video radio station 📹 📻 CLI built with [Node.js](https://nodejs.org/) and powered by [FFmpeg](http://ffmpeg.org). Meaning, This will allow for live streaming a video of music, playing over a video/gif, with the music information, and other overlay items 🖼️. Music and video are chosen from their respective folders in a defined `config.json` that can be generated using the CLI. Generated projects come included with some songs and videos to get up and running quickly! Also, this project has a REST HTTP JSON Api, to allow for interfacing with your stream using a frontend 👩‍💻.
 
@@ -29,7 +29,15 @@ _formerly known as piStreamRadio._
 
 # Getting Started
 
-Please see the [Documentation](https://torch2424.github.io/live-stream-radio/) 📚 for how to get started using `live-stream-radio`. In particular, the [Installation Guide](https://torch2424.github.io/live-stream-radio/#/cli/getting-started#installation) and [CLI Usage](https://torch2424.github.io/live-stream-radio/#/cli/usage) will be the most useful to new users. 😄
+Please see the [Documentation](./src/index.mdx) 📚 for how to get started using `live-stream-radio`. In particular, the [Installation Guide](./src/stream/gettingstarted.mdx) and [CLI Usage](./src/stream/usage.mdx) will be the most useful to new users. 😄
+
+You need [Node.js](https://nodejs.org/) 22 or newer and [FFmpeg](https://ffmpeg.org/) (built with libfreetype, for the on-screen text). Install this fork with:
+
+```
+npm install -g github:dustinreeves/live-stream-radio
+```
+
+To update a server that already runs `live-stream-radio`, use [scripts/update-install.sh](./scripts/update-install.sh). It backs up the current install, installs this fork and its dependencies, restarts your services, and prints how to roll back.
 
 # Web Console
 
@@ -106,7 +114,7 @@ _All AI-written, see the warning at the top._
 - **Missing tags don't show "undefined".** Files with no artist or album tag skip that overlay line instead of showing `Artist: undefined`, and files with no title tag show their file name. Handy for podcast archives.
 - **Apostrophes can't crash the stream.** A `'` in the overlay title or in a track's tags broke ffmpeg's filter and stopped the stream. Overlay text is now passed to ffmpeg through a temp file, so any text works.
 - **Skipping can't crash the stream.** A skipped track's ffmpeg could report its (expected) kill after the next track had started, which was taken as the new track failing and shut the whole station down.
-- **Works with current ffmpeg and Node.** fluent-ffmpeg is updated and patched for the newer `ffmpeg -formats` layout (ffmpeg 6+), and font paths work on Windows.
+- **Works with current ffmpeg and Node.** ffmpeg is run directly (fluent-ffmpeg is no longer maintained, and couldn't read newer ffmpeg's format list), and font paths work on Windows.
 - **Reverse proxy configs** for Caddy and nginx, and `api.trust_proxy`.
 - **The stream key stays out of the logs.** It is replaced with `<stream_key>` in log output, since the log is visible in the web console.
 - **API keys are compared in constant time.**
@@ -120,11 +128,12 @@ _All AI-written, see the warning at the top._
 - **Absolute project folders work**, e.g. `live-stream-radio /srv/radio`.
 - **More audio formats** (`.m4a`, `.aac`, `.ogg`, `.opus`), extensions in any case, and folders are scanned once a minute rather than for every track.
 - **Gifs are converted once** and reused, and temp files are cleaned up.
+- **Current dependencies, no known vulnerabilities.** fastify 5, music-metadata 11 and the rest are up to date (`npm audit` is clean), and chalk, find, upath, is-running, imagemin and fluent-ffmpeg are replaced by Node built-ins or a few lines of code. Needs Node 22 or newer.
 - **Tests** (`npm test`) and CI.
 
 # API Frontends
 
-_For building your own API frontend, please see the [API Documentation](https://torch2424.github.io/live-stream-radio/#/api/endpoints) 📚 on API Endpoints._
+_For building your own API frontend, please see the [API Documentation](./src/api/endpoints.mdx) 📚 on API Endpoints._
 
 This fork includes one: the [web console](#web-console) at `/console`. Other frontends are welcome too! If you make a `live-stream-radio` frontend, please open an issue and so we can add the project here 😄!
 
@@ -140,7 +149,7 @@ Please feel free to share your radio if you are using `live-stream-radio`. Just 
 
 # Compatibility
 
-Currently, this should work under any OS with support for [Node](https://nodejs.org/en/) and [FFMPEG](https://www.ffmpeg.org/). Specifically in the tradition of this project being developed for Raspberry Pi, formerly as piStreamRadio , this also supports Raspbian as well.
+Currently, this should work under any OS with support for [Node](https://nodejs.org/en/) 22 or newer and [FFMPEG](https://www.ffmpeg.org/) (tested with ffmpeg 9). Specifically in the tradition of this project being developed for Raspberry Pi, formerly as piStreamRadio , this also supports Raspbian as well.
 
 # Example Assets from the `--generate` template
 

@@ -155,16 +155,11 @@ const isLoopback = address => {
 // arrives from localhost, so use the client address the proxy appends to X-Forwarded-For.
 // Only the last entry is trusted: that one was added by our proxy, earlier ones can be faked.
 const getAddress = (request, config) => {
-  // fastify 1.x keeps the node request on .req
-  const raw = request.req || request.raw;
-  const address = (raw && raw.connection && raw.connection.remoteAddress) || 'unknown';
+  const address = (request.raw && request.raw.socket && request.raw.socket.remoteAddress) || 'unknown';
 
   const forwardedFor = request.headers['x-forwarded-for'];
   if (config.api && isEnabled(config.api.trust_proxy) && isLoopback(address) && typeof forwardedFor === 'string') {
-    const clientAddress = forwardedFor
-      .split(',')
-      .pop()
-      .trim();
+    const clientAddress = forwardedFor.split(',').pop().trim();
     if (clientAddress) {
       return clientAddress;
     }

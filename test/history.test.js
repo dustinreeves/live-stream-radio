@@ -12,7 +12,10 @@ test('keeps the newest items once full', () => {
   for (let i = 0; i < 5; i++) {
     history.addItemToHistory({ n: i });
   }
-  assert.deepStrictEqual(history.getHistory().map(item => item.n), [2, 3, 4]);
+  assert.deepStrictEqual(
+    history.getHistory().map(item => item.n),
+    [2, 3, 4]
+  );
 });
 
 test('defaults to 100 items, also for bad values', () => {

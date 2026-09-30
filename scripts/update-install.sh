@@ -25,7 +25,7 @@ die() {
 }
 
 [ "$(id -u)" -ne 0 ] || die "Run this as the user that runs the stream, not as root. It uses sudo when it needs to."
-for tool in node curl tar readlink; do
+for tool in node npm curl tar readlink; do
   command -v "$tool" > /dev/null || die "'$tool' is required but not installed."
 done
 
@@ -50,21 +50,12 @@ SUDO=""
 # --- Check Node and ffmpeg ----------------------------------------------------------------------
 
 NODE_VERSION="$(node -p 'process.versions.node')"
-node -e 'const [a, b] = process.versions.node.split(".").map(Number); process.exit(a > 8 || (a === 8 && b >= 3) ? 0 : 1)' ||
-  die "Node $NODE_VERSION is too old, 8.3 or newer is needed."
+node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 22 ? 0 : 1)' ||
+  die "Node $NODE_VERSION is too old, 22 or newer is needed. See https://nodejs.org/en/download (or your distro's NodeSource packages), then run this again."
 
-# fluent-ffmpeg 2.1.2 can't read the format list of newer ffmpeg builds (6+), and then refuses
-# to use flv / gif. Ask the installed copy directly rather than guessing from version numbers,
-# which nightly builds (e.g. "N-57736-...") don't have.
 FFMPEG_LINE="$(ffmpeg -version 2> /dev/null | head -n 1 || true)"
-FLUENT_VERSION="$(node -p "require('$INSTALL_DIR/node_modules/fluent-ffmpeg/package.json').version" 2> /dev/null || echo none)"
-NEED_FLUENT_UPGRADE=no
 if [ -z "$FFMPEG_LINE" ]; then
   warn "ffmpeg isn't on the PATH here. If your config.json sets ffmpeg_path, that's fine."
-elif ! (cd "$INSTALL_DIR" && node -e '
-  require("fluent-ffmpeg")().getAvailableFormats((err, f) => process.exit(!err && f.flv && f.gif ? 0 : 1));
-' 2> /dev/null); then
-  NEED_FLUENT_UPGRADE=yes
 fi
 
 for service in ${SERVICES[@]+"${SERVICES[@]}"}; do
@@ -83,10 +74,8 @@ echo
 echo "This will:"
 echo "  1. Back up the install to $BACKUP_DIR"
 echo "  2. Download $REPO ($BRANCH) from GitHub"
-echo "  3. Replace $INSTALL_DIR/src (and README, proxy/, scripts/) with it"
-if [ "$NEED_FLUENT_UPGRADE" = yes ]; then
-  echo "  4. Update fluent-ffmpeg $FLUENT_VERSION -> 2.1.3, needed for your ffmpeg"
-fi
+echo "  3. Replace $INSTALL_DIR/src (and package.json, README, proxy/, scripts/) with it"
+echo "  4. Reinstall its dependencies with npm"
 if [ ${#SERVICES[@]} -gt 0 ]; then
   echo "  5. Restart: ${SERVICES[*]}"
 else
@@ -112,36 +101,25 @@ while IFS= read -r -d '' file; do
   node --check "$file" || die "$file doesn't run on Node $NODE_VERSION, nothing was changed."
 done < <(find "$NEW_DIR/src" -name '*.js' -not -path '*/template/*' -print0)
 
+# Install its dependencies next to it, so a failed install leaves the current one untouched
+say "Installing its dependencies"
+[ -f "$NEW_DIR/package-lock.json" ] || die "The download has no package-lock.json, nothing was changed."
+(cd "$NEW_DIR" && npm ci --omit=dev --ignore-scripts --no-audit --no-fund --loglevel=error) ||
+  die "npm could not install the dependencies, nothing was changed."
+
 # --- Back up and install ------------------------------------------------------------------------
 
 say "Backing up to $BACKUP_DIR"
 $SUDO cp -a "$INSTALL_DIR" "$BACKUP_DIR"
 
 say "Installing"
-$SUDO rm -rf "$INSTALL_DIR/src"
-$SUDO cp -a "$NEW_DIR/src" "$INSTALL_DIR/src"
-for item in README.md proxy scripts; do
+for item in src node_modules package.json package-lock.json README.md proxy scripts; do
   if [ -e "$NEW_DIR/$item" ]; then
     $SUDO rm -rf "${INSTALL_DIR:?}/$item"
     $SUDO cp -a "$NEW_DIR/$item" "$INSTALL_DIR/$item"
   fi
 done
 $SUDO chmod +x "$INSTALL_DIR/src/index.js"
-
-if [ "$NEED_FLUENT_UPGRADE" = yes ]; then
-  say "Updating fluent-ffmpeg to 2.1.3"
-  command -v npm > /dev/null || die "npm is needed to update fluent-ffmpeg. Restore with the rollback steps below."
-  # Install it on its own, then put it (with its own dependencies nested) into place,
-  # so npm doesn't touch the rest of the install
-  npm install --silent --no-save --no-package-lock --prefix "$TMP_DIR/ff" fluent-ffmpeg@2.1.3 > /dev/null
-  $SUDO rm -rf "$INSTALL_DIR/node_modules/fluent-ffmpeg"
-  $SUDO cp -a "$TMP_DIR/ff/node_modules/fluent-ffmpeg" "$INSTALL_DIR/node_modules/fluent-ffmpeg"
-  $SUDO mkdir -p "$INSTALL_DIR/node_modules/fluent-ffmpeg/node_modules"
-  for dep in "$TMP_DIR"/ff/node_modules/*; do
-    [ "$(basename "$dep")" = "fluent-ffmpeg" ] && continue
-    $SUDO cp -a "$dep" "$INSTALL_DIR/node_modules/fluent-ffmpeg/node_modules/"
-  done
-fi
 
 # Quick check that it loads
 live-stream-radio --version > /dev/null || die "The new install doesn't start. Roll back with the steps below."

@@ -14,14 +14,8 @@ const keysMatch = (expectedKey, providedKey) => {
     return false;
   }
 
-  const expectedHash = crypto
-    .createHash('sha256')
-    .update(String(expectedKey))
-    .digest();
-  const providedHash = crypto
-    .createHash('sha256')
-    .update(providedKey)
-    .digest();
+  const expectedHash = crypto.createHash('sha256').update(String(expectedKey)).digest();
+  const providedHash = crypto.createHash('sha256').update(providedKey).digest();
   return crypto.timingSafeEqual(expectedHash, providedHash);
 };
 
