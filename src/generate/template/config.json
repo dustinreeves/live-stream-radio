@@ -24,6 +24,7 @@
   },
   "radio": {
     "audio_directory": "./audio",
+    "play_order": "shuffle",
     "video_directory": "./video",
     "overlay": {
       "enabled": true,
@@ -78,6 +79,7 @@
     "enabled": "true",
     "frequency": "0.2",
     "audio_directory": "./interludes/audio",
+    "play_order": "shuffle",
     "video_directory": "./interludes/video",
     "overlay": {
       "enabled": true,

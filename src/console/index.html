@@ -706,6 +706,11 @@
           ];
         };
         var PRESETS = ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow', 'slower', 'veryslow'];
+        var PLAY_ORDERS = [
+          { v: 'shuffle', l: 'Shuffle, no repeats until all have played' },
+          { v: 'in_order', l: 'In order, by file name' },
+          { v: 'random', l: 'Random, repeats allowed' }
+        ];
         var RESTART_NOTE = 'Restart the service after changing these (e.g. sudo systemctl restart cowardradio.service).';
 
         var TABS = [
@@ -765,6 +770,7 @@
                     h: '0.2 = about 1 in 5 tracks'
                   },
                   { p: 'interlude.audio_directory', t: 'text', l: 'Interlude audio folder', wide: true },
+                  { p: 'interlude.play_order', t: 'select', l: 'Interlude play order', o: PLAY_ORDERS, d: 'shuffle', wide: true },
                   { p: 'interlude.video_directory', t: 'text', l: 'Interlude video folder', wide: true }
                 ]
               },
@@ -787,6 +793,15 @@
                 h: 'Relative to the project folder. Subfolders are included.',
                 fields: [
                   { p: 'radio.audio_directory', t: 'text', l: 'Audio folder', wide: true },
+                  {
+                    p: 'radio.play_order',
+                    t: 'select',
+                    l: 'Play order',
+                    o: PLAY_ORDERS,
+                    d: 'shuffle',
+                    wide: true,
+                    h: 'Shuffle plays every episode once before any repeats'
+                  },
                   { p: 'radio.video_directory', t: 'text', l: 'Video / gif folder', wide: true }
                 ]
               },
@@ -916,8 +931,12 @@
           }
           if (f.t === 'select') {
             input = el('select', { 'data-path': f.p, 'data-type': 'select' });
+            // What the stream uses when the config doesn't set it
+            if (f.d) input.setAttribute('data-default', f.d);
+            // Options are values, or { v: value, l: label }
             f.o.forEach(function (opt) {
-              input.appendChild(el('option', { value: opt, text: opt }));
+              var value = typeof opt === 'string' ? opt : opt.v;
+              input.appendChild(el('option', { value: value, text: typeof opt === 'string' ? opt : opt.l }));
             });
           } else if (f.t === 'color') {
             var text = el('input', { type: 'text', 'data-path': f.p, 'data-type': 'text', placeholder: '#FFFFFF' });
@@ -1008,6 +1027,7 @@
             .querySelectorAll('[data-path]')
             .forEach(function (input) {
               var value = getPath(config, input.getAttribute('data-path'));
+              if (value === undefined && input.hasAttribute('data-default')) value = input.getAttribute('data-default');
               if (input.getAttribute('data-type') === 'bool') {
                 input.checked = isOn(value);
               } else {

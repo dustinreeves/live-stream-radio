@@ -43,6 +43,12 @@ test('findConfigProblem', () => {
   const noRadio = validConfig();
   noRadio.radio = 5;
   assert.match(configFile.findConfigProblem(noRadio), /"radio"/);
+  const badOrder = validConfig();
+  badOrder.radio.play_order = 'backwards';
+  assert.match(configFile.findConfigProblem(badOrder), /radio.play_order must be one of shuffle, in_order, random/);
+  const goodOrder = validConfig();
+  goodOrder.radio.play_order = 'in_order';
+  assert.strictEqual(configFile.findConfigProblem(goodOrder), undefined);
   const interlude = validConfig();
   interlude.interlude = { enabled: true };
   assert.match(configFile.findConfigProblem(interlude), /"interlude"/);

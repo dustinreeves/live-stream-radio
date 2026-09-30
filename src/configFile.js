@@ -1,6 +1,7 @@
 // Reading and changing config.json, with keys like "radio.overlay.enabled"
 const fs = require('fs-extra');
 const { isEnabled } = require('./configValues');
+const { PLAY_ORDERS } = require('./playOrder.service');
 
 // Never follow these, so a key can't reach Object.prototype
 const UNSAFE_KEY_PARTS = ['__proto__', 'constructor', 'prototype'];
@@ -58,6 +59,9 @@ const findConfigProblem = config => {
     const section = config[typeKeys[i]];
     if (!isObject(section) || typeof section.audio_directory !== 'string' || typeof section.video_directory !== 'string') {
       return `config needs a "${typeKeys[i]}" section with audio_directory and video_directory`;
+    }
+    if (section.play_order !== undefined && PLAY_ORDERS.indexOf(section.play_order) === -1) {
+      return `${typeKeys[i]}.play_order must be one of ${PLAY_ORDERS.join(', ')}`;
     }
   }
 

@@ -126,6 +126,7 @@ _All AI-written, see the warning at the top._
 - **History keeps the newest tracks.** After 100 tracks, history kept only the first track ever played, and showed it as playing now.
 - **Every generated project gets its own api key**, instead of the shared `super-secret-api-key`, which is refused when the api can be reached from other computers.
 - **Absolute project folders work**, e.g. `live-stream-radio /srv/radio`.
+- **No repeats.** Episodes are shuffled so every one plays once before any repeats (`play_order`), or can play in order by file name, and a restart carries on the same round. Before, each track was picked at random, so the same one could play twice in a row.
 - **More audio formats** (`.m4a`, `.aac`, `.ogg`, `.opus`), extensions in any case, and folders are scanned once a minute rather than for every track.
 - **Gifs are converted once** and reused, and temp files are cleaned up.
 - **Current dependencies, no known vulnerabilities.** fastify 5, music-metadata 11 and the rest are up to date (`npm audit` is clean), and chalk, find, upath, is-running, imagemin and fluent-ffmpeg are replaced by Node built-ins or a few lines of code. Needs Node 22 or newer.

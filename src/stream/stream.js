@@ -9,6 +9,8 @@ const statusService = require('../status.service');
 const queueService = require('../queue.service');
 const supportedFileTypes = require('../supportedFileTypes');
 const getRandomFileWithExtensionFromPath = require('./randomFile');
+const libraryService = require('../library.service');
+const playOrderService = require('../playOrder.service');
 const getOverlayTextString = require('./overlayText');
 const ffmpegOptions = require('./ffmpegOptions');
 const { startFfmpeg } = require('./ffmpegProcess');
@@ -102,10 +104,17 @@ module.exports = async (path, config, outputLocation, endCallback, errorCallback
   console.log(colors.magenta(`Finding audio... 🎤`));
   console.log('\n');
 
-  // Find a random song from the config directory, unless one was requested
-  const randomSong =
-    requestedSong ||
-    (await getRandomFileWithExtensionFromPath(supportedFileTypes.supportedAudioTypes, projectPath(path, typeConfig.audio_directory)));
+  // Find the next song from the config directory, following its play_order, unless one was requested.
+  // A requested song counts as played, so the shuffle doesn't bring it round again soon
+  const audioDirectory = projectPath(path, typeConfig.audio_directory);
+  let randomSong;
+  if (requestedSong) {
+    randomSong = requestedSong;
+    playOrderService.markPlayed(path, audioDirectory, requestedSong);
+  } else {
+    const audioFiles = libraryService.listFiles(supportedFileTypes.supportedAudioTypes, audioDirectory);
+    randomSong = playOrderService.pickNext(path, audioDirectory, audioFiles, typeConfig.play_order);
+  }
 
   console.log(colors.blue(requestedSong ? `Playing the requested audio:` : `Playing the audio:`));
   console.log(randomSong);
