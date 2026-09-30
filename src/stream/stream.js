@@ -1,24 +1,26 @@
-// Get our ffmpeg
-const ffmpeg = require('fluent-ffmpeg');
-const chalk = require('chalk');
-const musicMetadata = require('music-metadata');
-const upath = require('upath');
+const colors = require('../colors');
+const musicMetadata = require('../musicMetadata');
 const progress = require('cli-progress');
 
 // Get our Services and helper fucntions
-const safeStrings = require('./safeStrings');
 const fs = require('fs');
 const historyService = require('../history.service');
 const statusService = require('../status.service');
 const queueService = require('../queue.service');
 const supportedFileTypes = require('../supportedFileTypes');
 const getRandomFileWithExtensionFromPath = require('./randomFile');
+const libraryService = require('../library.service');
+const playOrderService = require('../playOrder.service');
 const getOverlayTextString = require('./overlayText');
-const { isEnabled } = require('../configValues');
+const ffmpegOptions = require('./ffmpegOptions');
+const { startFfmpeg } = require('./ffmpegProcess');
+const { isEnabled, projectPath } = require('../configValues');
 
-// Allow pre rendering the next video if needed
+// The video for the next track, prepared while this one plays: { typeKey, randomVideo, optimizedVideo }
 let nextVideo = undefined;
-let nextTypeKey = undefined;
+
+// Counts tracks, so a preparation that finishes after its track already started is thrown away
+let preRenderId = 0;
 
 const getTypeKey = config => {
   let typeKey = 'radio';
@@ -33,29 +35,43 @@ const getTypeKey = config => {
   return typeKey;
 };
 
-const getVideo = async (path, config, typeKey, errorCallback) => {
+const getTypeConfig = (config, typeKey) => {
+  if (!config[typeKey]) {
+    throw new Error(`Your config is missing its "${typeKey}" section`);
+  }
+  return config[typeKey];
+};
+
+const getVideo = async (path, config, typeKey) => {
   const randomVideo = await getRandomFileWithExtensionFromPath(
     supportedFileTypes.supportedVideoTypes,
-    `${path}${config[typeKey].video_directory}`
+    projectPath(path, getTypeConfig(config, typeKey).video_directory)
   );
 
   // Do some optimizations to our video as we need
   let optimizedVideo;
-  if (randomVideo.endsWith('.gif')) {
+  if (/\.gif$/i.test(randomVideo)) {
     // Optimize gif
-    optimizedVideo = await require('./gif.js').getOptimizedGif(randomVideo, config, errorCallback);
+    optimizedVideo = await require('./gif.js').getOptimizedGif(randomVideo, config);
   } else {
     optimizedVideo = randomVideo;
   }
 
   return {
+    typeKey: typeKey,
     randomVideo: randomVideo,
     optimizedVideo: optimizedVideo
   };
 };
 
-// Function to start a stream
+// Function to start a stream. Resolves with the ffmpeg process (see ffmpegProcess.js) once ffmpeg has been started,
+// and throws if the track can't be started (no files, unreadable song, ...)
 module.exports = async (path, config, outputLocation, endCallback, errorCallback) => {
+  // Anything still being prepared is for an earlier track
+  preRenderId++;
+  const preparedVideo = nextVideo;
+  nextVideo = undefined;
+
   // A track requested from the web console plays before anything random, skipping interludes.
   // Skip requests whose file has gone away (e.g. the audio folder changed)
   let requestedSong = undefined;
@@ -64,355 +80,211 @@ module.exports = async (path, config, outputLocation, endCallback, errorCallback
     if (fs.existsSync(queued.path)) {
       requestedSong = queued.path;
     } else {
-      console.log(chalk.yellow(`Skipping a requested track that no longer exists: ${queued.path}`));
+      console.log(colors.yellow(`Skipping a requested track that no longer exists: ${queued.path}`));
     }
   }
 
   // Find what type of stream we want, radio, interlude, etc...
-  let typeKey = 'radio';
+  // Follow the prepared video's type, so it fits the track
+  let typeKey;
   if (requestedSong) {
-    // The pre-rendered video may be for an interlude, only keep it if it's for radio
-    if (nextTypeKey && nextTypeKey !== 'radio') {
-      nextVideo = undefined;
-    }
-    nextTypeKey = undefined;
-  } else if (nextTypeKey) {
-    typeKey = nextTypeKey;
-    nextTypeKey = undefined;
+    typeKey = 'radio';
+  } else if (preparedVideo) {
+    typeKey = preparedVideo.typeKey;
   } else {
     typeKey = getTypeKey(config);
   }
+  const typeConfig = getTypeConfig(config, typeKey);
 
   if (typeKey !== 'radio') {
-    console.log(chalk.magenta(`Playing an ${typeKey}...`));
+    console.log(colors.magenta(`Playing an ${typeKey}...`));
     console.log('\n');
   }
 
-  console.log(chalk.magenta(`Finding audio... 🎤`));
+  console.log(colors.magenta(`Finding audio... 🎤`));
   console.log('\n');
 
-  // Find a random song from the config directory, unless one was requested
-  const randomSong =
-    requestedSong ||
-    (await getRandomFileWithExtensionFromPath(supportedFileTypes.supportedAudioTypes, `${path}${config[typeKey].audio_directory}`));
+  // Find the next song from the config directory, following its play_order, unless one was requested.
+  // A requested song counts as played, so the shuffle doesn't bring it round again soon
+  const audioDirectory = projectPath(path, typeConfig.audio_directory);
+  let randomSong;
+  if (requestedSong) {
+    randomSong = requestedSong;
+    playOrderService.markPlayed(path, audioDirectory, requestedSong);
+  } else {
+    const audioFiles = libraryService.listFiles(supportedFileTypes.supportedAudioTypes, audioDirectory);
+    randomSong = playOrderService.pickNext(path, audioDirectory, audioFiles, typeConfig.play_order);
+  }
 
-  console.log(chalk.blue(requestedSong ? `Playing the requested audio:` : `Playing the audio:`));
+  console.log(colors.blue(requestedSong ? `Playing the requested audio:` : `Playing the audio:`));
   console.log(randomSong);
   console.log('\n');
 
-  console.log(chalk.magenta(`Finding/Optimizing video... 📺`));
+  console.log(colors.magenta(`Finding/Optimizing video... 📺`));
   console.log('\n');
 
-  // Get the stream video
-  let randomVideo;
-  let optimizedVideo;
-  if (nextVideo) {
-    randomVideo = nextVideo.randomVideo;
-    optimizedVideo = nextVideo.optimizedVideo;
-    nextVideo = undefined;
-  } else {
-    const videoObject = await getVideo(path, config, typeKey, errorCallback);
-    randomVideo = videoObject.randomVideo;
-    optimizedVideo = videoObject.optimizedVideo;
-  }
+  // Get the stream video, the prepared one if it is for this type of track
+  const video = preparedVideo && preparedVideo.typeKey === typeKey ? preparedVideo : await getVideo(path, config, typeKey);
+  const randomVideo = video.randomVideo;
+  const optimizedVideo = video.optimizedVideo;
 
-  console.log(chalk.blue(`Playing the video:`));
+  console.log(colors.blue(`Playing the video:`));
   console.log(randomVideo);
   console.log('\n');
 
   // Get the information about the song
   const metadata = await musicMetadata.parseFile(randomSong, { duration: true });
+  const songDuration = metadata.format.duration;
+  if (!(songDuration > 0)) {
+    throw new Error(`Could not read how long ${randomSong} is`);
+  }
 
   // Log data about the song
   if (metadata.common.artist) {
-    console.log(chalk.yellow(`Artist: ${metadata.common.artist}`));
+    console.log(colors.yellow(`Artist: ${metadata.common.artist}`));
   }
   if (metadata.common.album) {
-    console.log(chalk.yellow(`Album: ${metadata.common.album}`));
+    console.log(colors.yellow(`Album: ${metadata.common.album}`));
   }
   if (metadata.common.title) {
-    console.log(chalk.yellow(`Song: ${metadata.common.title}`));
+    console.log(colors.yellow(`Song: ${metadata.common.title}`));
   }
-  console.log(chalk.yellow(`Duration (seconds): ${Math.ceil(metadata.format.duration)}`));
+  console.log(colors.yellow(`Duration (seconds): ${Math.ceil(songDuration)}`));
   console.log('\n');
-  // Log a album cover if available
-  if (metadata.common.picture && metadata.common.picture.length > 0) {
-    // windows is not supported by termImg
-    // process.platform always will be win32 on windows, no matter if it is 32bit or 64bit
-    if (process.platform != 'win32') {
-      try {
-        const termImg = require('term-img');
-        termImg(metadata.common.picture[0].data, {
-          width: '300px',
-          height: 'auto'
-        });
+  // Log a album cover if available, in terminals that can show images (e.g. iTerm2)
+  if (metadata.common.picture && metadata.common.picture.length > 0 && process.stdout.isTTY) {
+    try {
+      const termImg = (await import('term-img')).default;
+      const image = termImg(metadata.common.picture[0].data, {
+        width: '300px',
+        height: 'auto',
+        fallback: () => ''
+      });
+      if (image) {
+        console.log(image);
         console.log('\n');
-      } catch (e) {
-        // Do nothing, we dont need the album art
       }
+    } catch (e) {
+      // Do nothing, we dont need the album art
     }
   }
 
-  // Create a new command
-  ffmpegCommand = ffmpeg();
+  // Where the stream goes, one output or several
+  const outputTarget = ffmpegOptions.getOutputTarget(outputLocation);
 
-  // Set our ffmpeg path if we have one
-  if (config.ffmpeg_path) {
-    ffmpegCommand = ffmpegCommand.setFfmpegPath(config.ffmpeg_path);
-  }
+  const args = [
+    // Add the video input, looped infinitely
+    '-stream_loop',
+    '-1',
+    '-i',
+    optimizedVideo,
+    // Add our audio as input
+    '-i',
+    randomSong,
+    // Add a silent input
+    // This is useful for setting the stream -re
+    // pace, as well as not causing any weird bugs where we only have a video
+    // And no audio output
+    // https://trac.ffmpeg.org/wiki/Null#anullsrc
+    // -f lavfi: Indicate we are a virtual input
+    // -re: Livestream, encode in realtime as audio comes in
+    // https://superuser.com/questions/508560/ffmpeg-stream-a-file-with-original-playing-rate
+    // Need the -re here as video can drastically reduce input speed, and input audio has delay
+    '-f',
+    'lavfi',
+    '-re',
+    '-i',
+    'anullsrc'
+  ];
 
-  // Add the video input
-  ffmpegCommand = ffmpegCommand.input(optimizedVideo).inputOptions([
-    // Loop the video infinitely
-    `-stream_loop -1`
-  ]);
-
-  // Add our audio as input
-  ffmpegCommand = ffmpegCommand.input(randomSong).audioCodec('copy');
-
-  // Add a silent input
-  // This is useful for setting the stream -re
-  // pace, as well as not causing any weird bugs where we only have a video
-  // And no audio output
-  // https://trac.ffmpeg.org/wiki/Null#anullsrc
-  ffmpegCommand = ffmpegCommand
-    .input('anullsrc')
-    .audioCodec('copy')
-    .inputOptions([
-      // Indicate we are a virtual input
-      `-f lavfi`,
-      // Livestream, encode in realtime as audio comes in
-      // https://superuser.com/questions/508560/ffmpeg-stream-a-file-with-original-playing-rate
-      // Need the -re here as video can drastically reduce input speed, and input audio has delay
-      `-re`
-    ]);
-
-  // Start creating our complex filter for overlaying things
-  let complexFilterString = '';
-
-  // Add silence in front of song to prevent / help with stream cutoff
-  // Since audio is streo, we have two channels
-  // https://ffmpeg.org/ffmpeg-filters.html#adelay
-  // In milliseconds
-  const delayInMilli = 3000;
-  complexFilterString += `[1:a] adelay=${delayInMilli}|${delayInMilli} [delayedaudio]; `;
-
-  // Mix our silent and song audio, se we always have an audio stream
-  // https://ffmpeg.org/ffmpeg-filters.html#amix
-  complexFilterString += `[delayedaudio][2:a] amix=inputs=2:duration=first:dropout_transition=3 [audiooutput]; `;
-
-  // Check if we want normalized audio
-  if (isEnabled(config.normalize_audio)) {
-    // Use the loudnorm filter
-    // http://ffmpeg.org/ffmpeg-filters.html#loudnorm
-    complexFilterString += `[audiooutput] loudnorm [audiooutput]; `;
-  }
-
-  // Okay this some weirdness. Involving fps.
-  // So since we are realtime encoding to get the video to stream
-  // At an apporpriate rate, this means that we encode a certain number of frames to match this
-  // Now, let's say we have a 60fps input video, and want to output 24 fps. This is fine and work
-  // FFMPEG will output at ~24 fps (little more or less), and video will run at correct rate.
-  // But if you noticed the output "Current FPS" will slowly degrade to either the input
-  // our output fps. Therefore if we had an input video at lest say 8 fps, it will slowly
-  // Degrade to 8 fps, and then we start buffering. Thus we need to use a filter to force
-  // The input video to be converted to the output fps to get the correct speed at which frames are rendered
-  let configFps = '24';
-  if (config.video_fps) {
-    configFps = config.video_fps;
-  }
-  complexFilterString += `[0:v] fps=fps=${configFps}`;
-
-  // Add our overlay image
-  // This works by getting the initial filter chain applied to the first
-  // input, aka [0:v], and giving it a label, [videowithtext].
-  // Then using the overlay filter to combine the first input, with the video of
-  // a second input, aka [1:v], which in this case is our image.
-  // Lastly using scale2ref filter to ensure the image size is consistent on all
-  // videos. And scaled the image to the video, preserving video quality
+  // Add our overlay image input, if enabled
+  let imageObject = undefined;
   if (
-    config[typeKey].overlay &&
-    isEnabled(config[typeKey].overlay.enabled) &&
-    config[typeKey].overlay.image &&
-    isEnabled(config[typeKey].overlay.image.enabled)
+    typeConfig.overlay &&
+    isEnabled(typeConfig.overlay.enabled) &&
+    typeConfig.overlay.image &&
+    isEnabled(typeConfig.overlay.image.enabled)
   ) {
-    // Add our image input
-    const imageObject = config[typeKey].overlay.image;
-    const imagePath = upath.join(path, imageObject.image_path);
-    ffmpegCommand = ffmpegCommand.input(imagePath);
-    complexFilterString +=
-      ` [inputvideo];` +
-      `[3:v][inputvideo] scale2ref [scaledoverlayimage][scaledvideo];` +
-      // Notice the overlay shortest =1, this is required to stop the video from looping infinitely
-      `[scaledvideo][scaledoverlayimage] overlay=x=${imageObject.position_x}:y=${imageObject.position_y}`;
+    imageObject = typeConfig.overlay.image;
+    args.push('-i', projectPath(path, imageObject.image_path));
   }
 
-  // Add our overlayText
+  // Apply our complex filter, with the overlay image and text
   const overlayTextFilterString = await getOverlayTextString(path, config, typeKey, metadata, randomSong);
-  if (overlayTextFilterString) {
-    if (complexFilterString.length > 0) {
-      complexFilterString += `, `;
-    }
-    complexFilterString += `${overlayTextFilterString}`;
-  }
+  args.push('-filter_complex', ffmpegOptions.buildComplexFilter(config, imageObject, overlayTextFilterString));
 
-  // Set our final output video pad
-  complexFilterString += ` [videooutput]`;
-
-  // Apply our complext filter
-  ffmpegCommand = ffmpegCommand.complexFilter(complexFilterString);
+  // Add our output options for the stream, and overwrite the output if it's a file
+  const streamDuration = ffmpegOptions.getStreamDuration(songDuration);
+  args.push(...ffmpegOptions.buildOutputOptions(config, streamDuration), ...outputTarget.options, '-y', outputTarget.location);
 
   // Let's create a nice progress bar
   // Using the song length as the 100%, as that is when the stream should end
-  const songTotalDuration = Math.floor(metadata.format.duration);
-  const progressBar = new progress.Bar(
+  const songTotalDuration = Math.floor(songDuration);
+  const progressBar = new progress.SingleBar(
     {
       format: 'Audio Progress {bar} {percentage}% | Time Playing: {duration_formatted} |'
     },
     progress.Presets.shades_classic
   );
 
-  // Set our event handlers
-  ffpmepgCommand = ffmpegCommand
-    .on('start', commandString => {
-      console.log(' ');
-      console.log(`${chalk.blue('Spawned Ffmpeg with command:')}`);
-      // Hide the stream key, the log is visible in the web console
-      console.log(config.stream_key ? commandString.split(config.stream_key).join('<stream_key>') : commandString);
-      console.log(' ');
+  // Finally, start ffmpeg, and wait until it is running (or failed to start)
+  let ffmpegProcess;
+  await new Promise(resolve => {
+    ffmpegProcess = startFfmpeg(config.ffmpeg_path, args, {
+      start: commandLine => {
+        console.log(' ');
+        console.log(`${colors.blue('Spawned Ffmpeg with command:')}`);
+        // Hide the stream key, the log is visible in the web console
+        console.log(config.stream_key ? commandLine.split(config.stream_key).join('<stream_key>') : commandLine);
+        console.log(' ');
 
-      // Start our progress bar
-      progressBar.start(songTotalDuration, 0);
-    })
-    .on('end', () => {
-      progressBar.stop();
-      if (endCallback) {
-        endCallback();
+        // Start our progress bar
+        progressBar.start(songTotalDuration, 0);
+        resolve();
+      },
+      progress: status => {
+        const seconds = Math.max(0, Math.floor(status.seconds));
+
+        // Set seconds onto progressBar
+        progressBar.update(Math.min(seconds, songTotalDuration));
+
+        // Save for the api / web console
+        statusService.setProgress({
+          seconds: seconds,
+          fps: status.fps,
+          kbps: status.kbps
+        });
+      },
+      end: () => {
+        progressBar.stop();
+        if (endCallback) {
+          endCallback();
+        }
+      },
+      error: (err, stderr) => {
+        progressBar.stop();
+        resolve();
+
+        if (errorCallback) {
+          errorCallback(err, stderr);
+        }
       }
-    })
-    .on('error', (err, stdout, stderr) => {
-      progressBar.stop();
-
-      if (errorCallback) {
-        errorCallback(err, stdout, stderr);
-      }
-    })
-    .on('progress', progress => {
-      // Get our timestamp
-      const timestamp = progress.timemark.substring(0, 8);
-      const splitTimestamp = timestamp.split(':');
-      const seconds = parseInt(splitTimestamp[0], 10) * 60 * 60 + parseInt(splitTimestamp[1], 10) * 60 + parseInt(splitTimestamp[2], 10);
-
-      // Set seconds onto progressBar
-      progressBar.update(seconds);
-
-      // Save for the api / web console
-      statusService.setProgress({
-        seconds: seconds,
-        fps: progress.currentFps,
-        kbps: progress.currentKbps
-      });
     });
+  });
 
-  // Get our stream duration
-  // This is done instead of using the -shortest flag
-  // Because of a bug where -shortest can't be used with complex audio filter
-  // https://trac.ffmpeg.org/ticket/3789
-  // This will give us our song duration, plus some beginning and ending padding
-  const delayInSeconds = Math.ceil(delayInMilli / 1000);
-  const streamDuration = delayInSeconds * 2 + Math.ceil(metadata.format.duration);
-
-  // Create our ouput options
-  // Some defaults we don't want change
-  // Good starting point: https://wiki.archlinux.org/index.php/Streaming_to_twitch.tv
-  const outputOptions = [
-    `-map [videooutput]`,
-    `-map [audiooutput]`,
-    // Our fps from earlier
-    `-r ${configFps}`,
-    // Group of pictures, want to set to 2 seconds
-    // https://trac.ffmpeg.org/wiki/EncodingForStreamingSites
-    // https://www.addictivetips.com/ubuntu-linux-tips/stream-to-twitch-command-line-linux/
-    // Best Explanation: https://superuser.com/questions/908280/what-is-the-correct-way-to-fix-keyframes-in-ffmpeg-for-dash
-    `-g ${parseInt(configFps, 10) * 2}`,
-    `-keyint_min ${configFps}`,
-    // Stop audio once we hit the specified duration
-    `-t ${streamDuration}`,
-    // https://trac.ffmpeg.org/wiki/EncodingForStreamingSites
-    `-pix_fmt yuv420p`
-  ];
-
-  if (config.video_width && config.video_height) {
-    outputOptions.push(`-s ${config.video_width}x${config.video_height}`);
-  } else {
-    outputOptions.push(`-s 480x854`);
-  }
-
-  if (config.video_bit_rate) {
-    outputOptions.push(`-b:v ${config.video_bit_rate}`);
-    outputOptions.push(`-minrate ${config.video_bit_rate}`);
-    outputOptions.push(`-maxrate ${config.video_bit_rate}`);
-  }
-
-  if (config.audio_bit_rate) {
-    outputOptions.push(`-b:a ${config.audio_bit_rate}`);
-  }
-
-  if (config.audio_sample_rate) {
-    outputOptions.push(`-ar ${config.audio_sample_rate}`);
-  }
-
-  // Set our audio codec, this can drastically affect performance
-  if (config.audio_codec) {
-    outputOptions.push(`-acodec ${config.audio_codec}`);
-  } else {
-    outputOptions.push(`-acodec aac`);
-  }
-
-  // Set our video codec, and encoder options
-  // https://trac.ffmpeg.org/wiki/EncodingForStreamingSites
-  if (config.video_codec) {
-    outputOptions.push(`-vcodec ${config.video_codec}`);
-  } else {
-    outputOptions.push(`-vcodec libx264`);
-  }
-  if (config.preset) {
-    outputOptions.push(`-preset ${config.preset}`);
-  }
-  if (config.bufsize) {
-    outputOptions.push(`-bufsize ${config.bufsize}`);
-  }
-  if (config.crf) {
-    outputOptions.push(`-crf ${config.crf}`);
-  }
-  if (config.threads) {
-    outputOptions.push(`-threads ${config.threads}`);
-  }
-
-  // Finally, save the stream to our stream URL
-  let singleOutputLocation = '';
-  if (Array.isArray(outputLocation)) {
-    singleOutputLocation = outputLocation[0];
-  } else {
-    singleOutputLocation = outputLocation;
-  }
-
-  // Add our output options for the stream
-  ffmpegCommand = ffmpegCommand.outputOptions([
-    ...outputOptions,
-    // Set format to flv (Youtube/Twitch)
-    `-f flv`
-  ]);
-
-  ffmpegCommand = ffmpegCommand.save(singleOutputLocation);
-
-  // Start some pre-rendering
-  const preRenderTask = async () => {
-    // Requested tracks skip interludes, so don't prepare an interlude video while any are waiting
-    nextTypeKey = queueService.hasTracks() ? 'radio' : getTypeKey(config);
-    nextVideo = await getVideo(path, config, nextTypeKey, errorCallback);
-  };
-  preRenderTask();
+  // Prepare the next track's video while this one plays
+  // Requested tracks skip interludes, so don't prepare an interlude video while any are waiting
+  const thisPreRenderId = preRenderId;
+  const nextTypeKey = queueService.hasTracks() ? 'radio' : getTypeKey(config);
+  getVideo(path, config, nextTypeKey)
+    .then(video => {
+      if (thisPreRenderId === preRenderId) {
+        nextVideo = video;
+      }
+    })
+    .catch(e => {
+      console.log(colors.yellow(`Could not prepare the next video, trying again when the next track starts: ${e.message}`));
+    });
 
   // Add this item to our history
   const historyMetadata = metadata.common;
@@ -423,7 +295,7 @@ module.exports = async (path, config, outputLocation, endCallback, errorCallback
     requested: Boolean(requestedSong),
     audio: {
       path: randomSong,
-      duration: metadata.format.duration,
+      duration: songDuration,
       metadata: historyMetadata
     },
     video: {
@@ -431,5 +303,5 @@ module.exports = async (path, config, outputLocation, endCallback, errorCallback
     }
   });
 
-  return ffmpegCommand;
+  return ffmpegProcess;
 };

@@ -1,16 +1,13 @@
 // Overlay text for the stream
 const fs = require('fs');
 const os = require('os');
-const upath = require('upath');
-const { isEnabled } = require('../configValues');
+const nodePath = require('path');
+const { isEnabled, projectPath } = require('../configValues');
 
 // Quote a file path for use as a filter option. Forward slashes, and the drive letter colon
 // escaped, so Windows paths like C:\radio\font.ttf work as well as Linux ones
 const filterPath = filePath => {
-  const escaped = upath
-    .normalize(filePath)
-    .replace(/:/g, '\\:')
-    .replace(/'/g, "'\\''");
+  const escaped = nodePath.normalize(filePath).replace(/\\/g, '/').replace(/:/g, '\\:').replace(/'/g, "'\\''");
   return `'${escaped}'`;
 };
 
@@ -19,7 +16,7 @@ const filterPath = filePath => {
 // and escaping them into the filter reliably is not possible across ffmpeg versions.
 // The file is read once when ffmpeg starts, so it's safe to overwrite for the next track.
 const writeTextFile = (key, text) => {
-  const textPath = upath.join(os.tmpdir(), `live-stream-radio-overlay-${process.pid}-${key}.txt`);
+  const textPath = nodePath.join(os.tmpdir(), `live-stream-radio-overlay-${process.pid}-${key}.txt`);
   fs.writeFileSync(textPath, text);
   return textPath;
 };
@@ -52,13 +49,13 @@ const getOverlayTextString = async (path, config, typeKey, metadata, audioPath) 
   }
 
   const overlayConfigObject = config[typeKey].overlay;
-  const fontPath = `${path}${overlayConfigObject.font_path}`;
+  const fontPath = projectPath(path, overlayConfigObject.font_path);
   const common = metadata.common || {};
 
   // Songs without a title tag (common for podcast episodes) show their file name instead
   let songTitle = common.title;
   if (!songTitle && audioPath) {
-    songTitle = upath.trimExt(upath.basename(audioPath));
+    songTitle = nodePath.basename(audioPath, nodePath.extname(audioPath));
   }
 
   // [config key, text to show]. Metadata lines are skipped when the file has no such tag,

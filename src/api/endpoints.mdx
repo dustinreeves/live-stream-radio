@@ -252,6 +252,7 @@ Changes a config param in the config.json. If they key has no value, it will be 
     }
 }
 ```
+**HTTP 400** - `value` is not JSON, the key is not valid (e.g. `__proto__`), or the change would leave a config the stream can't run
 
 
 ## PUT /config
@@ -262,7 +263,7 @@ Replaces the whole config.json. The previous file is kept as `config.json.bak`. 
 
 ### Body Params
 
-* `config` - The complete new config, as a JSON object. It must keep its `api` section.
+* `config` - The complete new config, as a JSON object. It must keep its `api` section, and a `radio` section (and `interlude`, when enabled) with `audio_directory` and `video_directory`.
 
 ### Example Response:
 **HTTP 200** - Successful
@@ -272,7 +273,7 @@ Replaces the whole config.json. The previous file is kept as `config.json.bak`. 
     "backup": "config.json.bak"
 }
 ```
-**HTTP 400** - Not an object, or missing the `api` section
+**HTTP 400** - Not an object, or missing one of the sections above
 
 ## GET /stream/status
 
@@ -374,7 +375,7 @@ The tracks queued to play next, in order. When the queue is empty the stream pic
 ```
 {
     "queue": [
-        { "path": "/home/me/my-radio/./audio/episode-12.mp3", "date": 1790000000000 }
+        { "path": "/home/me/my-radio/audio/episode-12.mp3", "date": 1790000000000 }
     ]
 }
 ```

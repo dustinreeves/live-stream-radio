@@ -22,7 +22,7 @@
         :root {
           --bg: #141413;
           --panel: #1e1e1c;
-          --text: #ececE8;
+          --text: #ecece8;
           --muted: #9a9a93;
           --border: #33332f;
           --accent: #ff8a4c;
@@ -39,7 +39,12 @@
         margin: 0;
         background: var(--bg);
         color: var(--text);
-        font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        font:
+          15px/1.45 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
       }
       main {
         max-width: 1100px;
@@ -210,7 +215,11 @@
       #log {
         background: var(--log-bg);
         color: var(--log-text);
-        font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace;
+        font:
+          12px/1.5 ui-monospace,
+          Menlo,
+          Consolas,
+          monospace;
         padding: 10px;
         border-radius: 8px;
         height: 320px;
@@ -220,7 +229,11 @@
         margin: 0;
       }
       #config {
-        font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace;
+        font:
+          13px/1.5 ui-monospace,
+          Menlo,
+          Consolas,
+          monospace;
         height: 420px;
         resize: vertical;
         white-space: pre;
@@ -381,7 +394,8 @@
       <form id="login" class="panel hidden">
         <h1 style="margin-bottom: 12px">Radio Console</h1>
         <p id="insecure" class="note bad hidden" style="margin-top: 0">
-          This connection isn't encrypted, so your password could be read on the way. Use HTTPS (see proxy/ in the project) or an SSH tunnel.
+          This connection isn't encrypted, so your password could be read on the way. Use HTTPS (see proxy/ in the project) or an SSH
+          tunnel.
         </p>
         <div id="login-user">
           <input id="username" type="text" placeholder="Username" autocomplete="username" autocapitalize="off" />
@@ -461,11 +475,11 @@
         <section class="panel" style="margin-top: 16px">
           <h2>Stream settings</h2>
           <p class="note" style="margin-top: 0">
-            Changes take effect from the next track, or right away with <b>Save &amp; apply now</b> (which skips the current track). Settings
-            marked <span class="restart">restart</span> need the service restarted. The previous config is kept as config.json.bak.
+            Changes take effect from the next track, or right away with <b>Save &amp; apply now</b> (which skips the current track).
+            Settings marked <span class="restart">restart</span> need the service restarted. The previous config is kept as config.json.bak.
           </p>
           <div id="tabs" class="tabs" role="tablist"></div>
-          <form id="settings" autocomplete="off" onsubmit="return false"></form>
+          <form id="settings" autocomplete="off" onsubmit="return false;"></form>
           <div id="raw-pane" class="hidden">
             <p class="note" style="margin-top: 0">The whole config.json, for anything the form doesn't cover.</p>
             <textarea id="config" spellcheck="false"></textarea>
@@ -477,12 +491,11 @@
             <span id="config-msg" class="note"></span>
           </div>
         </section>
-
       </div>
     </main>
 
     <script>
-      (function() {
+      (function () {
         var KEY_NAME = 'lsr-console-auth';
         // { header: 'Session <token>' or the api key, user: username or null }
         var auth = null;
@@ -491,13 +504,13 @@
         var libraryFiles = [];
         var busy = false;
 
-        var $ = function(id) {
+        var $ = function (id) {
           return document.getElementById(id);
         };
 
         // Storage can be blocked (private mode etc), never let that break the page
         var store = {
-          get: function() {
+          get: function () {
             try {
               var saved = JSON.parse(sessionStorage.getItem(KEY_NAME) || localStorage.getItem(KEY_NAME));
               return saved && saved.header ? saved : null;
@@ -505,13 +518,13 @@
               return null;
             }
           },
-          set: function(value, remember) {
+          set: function (value, remember) {
             try {
               sessionStorage.setItem(KEY_NAME, JSON.stringify(value));
               if (remember) localStorage.setItem(KEY_NAME, JSON.stringify(value));
             } catch (e) {}
           },
-          clear: function() {
+          clear: function () {
             try {
               sessionStorage.removeItem(KEY_NAME);
               localStorage.removeItem(KEY_NAME);
@@ -526,12 +539,12 @@
             opts.headers['Content-Type'] = 'application/json';
             opts.body = JSON.stringify(body);
           }
-          return fetch(path, opts).then(function(res) {
+          return fetch(path, opts).then(function (res) {
             if (res.status === 401 && path !== '/console/login') {
               signOut(auth && auth.user ? 'Your session has ended, please sign in again.' : 'That API key was not accepted.');
               throw new Error('unauthorized');
             }
-            return res.json().then(function(data) {
+            return res.json().then(function (data) {
               if (!res.ok) throw new Error(data.message || 'HTTP ' + res.status);
               return data;
             });
@@ -563,7 +576,7 @@
 
         // ---- Status / now playing ----
         function refreshStatus() {
-          return api('GET', '/stream/status').then(function(data) {
+          return api('GET', '/stream/status').then(function (data) {
             var pill = $('status');
             pill.className = 'pill ' + (data.isRunning ? 'live' : 'down');
             $('status-text').textContent = data.isRunning ? 'Live · up ' + fmtTime(data.uptime) : 'Stopped';
@@ -584,7 +597,8 @@
 
             var d = describe(now);
             $('now-title').textContent = d.title;
-            $('now-sub').textContent = (d.sub ? d.sub + ' · ' : '') + (now.type === 'interlude' ? 'interlude' : fileName(now.video && now.video.path));
+            $('now-sub').textContent =
+              (d.sub ? d.sub + ' · ' : '') + (now.type === 'interlude' ? 'interlude' : fileName(now.video && now.video.path));
 
             var duration = now.audio && now.audio.duration;
             // ffmpeg time includes the 3 second lead-in silence
@@ -598,14 +612,14 @@
         }
 
         function refreshHistory() {
-          return api('GET', '/stream/history').then(function(data) {
+          return api('GET', '/stream/history').then(function (data) {
             var list = $('history');
             list.textContent = '';
             data.history
               .slice()
               .reverse()
               .slice(0, 50)
-              .forEach(function(item) {
+              .forEach(function (item) {
                 var d = describe(item);
                 var li = document.createElement('li');
                 var title = document.createElement('div');
@@ -633,11 +647,11 @@
         }
 
         function refreshLog() {
-          return api('GET', '/stream/log?since=' + lastLogId).then(function(data) {
+          return api('GET', '/stream/log?since=' + lastLogId).then(function (data) {
             if (!data.log.length) return;
             var pre = $('log');
             var text = data.log
-              .map(function(line) {
+              .map(function (line) {
                 return new Date(line.date).toLocaleTimeString() + '  ' + line.text;
               })
               .join('\n');
@@ -654,36 +668,36 @@
           busy = true;
           $('control-msg').className = 'note';
           $('control-msg').textContent = label + '…';
-          ['btn-start', 'btn-stop', 'btn-skip'].forEach(function(id) {
+          ['btn-start', 'btn-stop', 'btn-skip'].forEach(function (id) {
             $(id).disabled = true;
           });
           api('POST', '/stream/' + action, {})
-            .then(function() {
+            .then(function () {
               $('control-msg').textContent = label + ' sent.';
             })
-            .catch(function(e) {
+            .catch(function (e) {
               $('control-msg').className = 'note bad';
               $('control-msg').textContent = label + ' failed: ' + e.message;
             })
-            .then(function() {
+            .then(function () {
               busy = false;
               setTimeout(tick, 1500);
             });
         }
 
-        $('btn-start').onclick = function() {
+        $('btn-start').onclick = function () {
           control('start', 'Start');
         };
-        $('btn-skip').onclick = function() {
+        $('btn-skip').onclick = function () {
           control('restart', 'Skip');
         };
-        $('btn-stop').onclick = function() {
+        $('btn-stop').onclick = function () {
           if (confirm('Stop the stream? Viewers will see it go offline.')) control('stop', 'Stop');
         };
 
         // ---- Stream settings ----
         // Field types: text, password, number, bool, select, color. A "text" group is a Common Text Object.
-        var IMAGE_FIELDS = function(base) {
+        var IMAGE_FIELDS = function (base) {
           return [
             { p: base + '.enabled', t: 'bool', l: 'Show the image' },
             { p: base + '.image_path', t: 'text', l: 'Image file', wide: true, h: 'Relative to the project folder, e.g. ./overlay.png' },
@@ -692,6 +706,11 @@
           ];
         };
         var PRESETS = ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow', 'slower', 'veryslow'];
+        var PLAY_ORDERS = [
+          { v: 'shuffle', l: 'Shuffle, no repeats until all have played' },
+          { v: 'in_order', l: 'In order, by file name' },
+          { v: 'random', l: 'Random, repeats allowed' }
+        ];
         var RESTART_NOTE = 'Restart the service after changing these (e.g. sudo systemctl restart cowardradio.service).';
 
         var TABS = [
@@ -702,13 +721,34 @@
                 title: 'Overlay',
                 fields: [
                   { p: 'radio.overlay.enabled', t: 'bool', l: 'Show the overlay (text and image) on the stream' },
-                  { p: 'radio.overlay.font_path', t: 'text', l: 'Font file', wide: true, h: 'Relative to the project folder, e.g. ./fonts/Lato-Regular.ttf' }
+                  {
+                    p: 'radio.overlay.font_path',
+                    t: 'text',
+                    l: 'Font file',
+                    wide: true,
+                    h: 'Relative to the project folder, e.g. ./fonts/Lato-Regular.ttf'
+                  }
                 ]
               },
               { text: 'radio.overlay.title', title: 'Title', textKey: 'text', scroll: true, h: 'Fixed text, like your station name.' },
-              { text: 'radio.overlay.artist', title: 'Artist line', textKey: 'label', h: 'Shown before the artist tag. Hidden when a file has no artist.' },
-              { text: 'radio.overlay.album', title: 'Album line', textKey: 'label', h: 'Shown before the album tag. Hidden when a file has no album.' },
-              { text: 'radio.overlay.song', title: 'Song line', textKey: 'label', h: "Shown before the song title. Uses the file name when a file has no title tag." },
+              {
+                text: 'radio.overlay.artist',
+                title: 'Artist line',
+                textKey: 'label',
+                h: 'Shown before the artist tag. Hidden when a file has no artist.'
+              },
+              {
+                text: 'radio.overlay.album',
+                title: 'Album line',
+                textKey: 'label',
+                h: 'Shown before the album tag. Hidden when a file has no album.'
+              },
+              {
+                text: 'radio.overlay.song',
+                title: 'Song line',
+                textKey: 'label',
+                h: 'Shown before the song title. Uses the file name when a file has no title tag.'
+              },
               { title: 'Overlay image', fields: IMAGE_FIELDS('radio.overlay.image') }
             ]
           },
@@ -720,8 +760,17 @@
                 h: 'Short clips (station idents, ads, jingles) played between tracks, from their own folders.',
                 fields: [
                   { p: 'interlude.enabled', t: 'bool', l: 'Play interludes' },
-                  { p: 'interlude.frequency', t: 'number', l: 'How often (0 to 1)', step: '0.05', min: 0, max: 1, h: '0.2 = about 1 in 5 tracks' },
+                  {
+                    p: 'interlude.frequency',
+                    t: 'number',
+                    l: 'How often (0 to 1)',
+                    step: '0.05',
+                    min: 0,
+                    max: 1,
+                    h: '0.2 = about 1 in 5 tracks'
+                  },
                   { p: 'interlude.audio_directory', t: 'text', l: 'Interlude audio folder', wide: true },
+                  { p: 'interlude.play_order', t: 'select', l: 'Interlude play order', o: PLAY_ORDERS, d: 'shuffle', wide: true },
                   { p: 'interlude.video_directory', t: 'text', l: 'Interlude video folder', wide: true }
                 ]
               },
@@ -744,6 +793,15 @@
                 h: 'Relative to the project folder. Subfolders are included.',
                 fields: [
                   { p: 'radio.audio_directory', t: 'text', l: 'Audio folder', wide: true },
+                  {
+                    p: 'radio.play_order',
+                    t: 'select',
+                    l: 'Play order',
+                    o: PLAY_ORDERS,
+                    d: 'shuffle',
+                    wide: true,
+                    h: 'Shuffle plays every episode once before any repeats'
+                  },
                   { p: 'radio.video_directory', t: 'text', l: 'Video / gif folder', wide: true }
                 ]
               },
@@ -801,7 +859,13 @@
                 fields: [
                   { p: 'api.host', t: 'text', l: 'Listen address', h: 'localhost = only this machine' },
                   { p: 'api.port', t: 'number', l: 'Port' },
-                  { p: 'api.key', t: 'password', l: 'API key', wide: true, h: 'Leave set: with no key and no console users the API is open to anyone' },
+                  {
+                    p: 'api.key',
+                    t: 'password',
+                    l: 'API key',
+                    wide: true,
+                    h: 'Leave set: with no key and no console users the API is open to anyone'
+                  },
                   { p: 'api.number_of_history_items', t: 'number', l: 'History length' },
                   {
                     p: 'api.trust_proxy',
@@ -826,7 +890,7 @@
         var dirty = false;
 
         function getPath(obj, path) {
-          return path.split('.').reduce(function(o, k) {
+          return path.split('.').reduce(function (o, k) {
             return o && typeof o === 'object' ? o[k] : undefined;
           }, obj);
         }
@@ -834,7 +898,7 @@
         function setPath(obj, path, value) {
           var keys = path.split('.');
           var o = obj;
-          keys.slice(0, -1).forEach(function(k) {
+          keys.slice(0, -1).forEach(function (k) {
             if (!o[k] || typeof o[k] !== 'object') o[k] = {};
             o = o[k];
           });
@@ -848,12 +912,12 @@
 
         function el(tag, props, children) {
           var node = document.createElement(tag);
-          Object.keys(props || {}).forEach(function(k) {
+          Object.keys(props || {}).forEach(function (k) {
             if (k === 'text') node.textContent = props[k];
             else if (k === 'className') node.className = props[k];
             else node.setAttribute(k, props[k]);
           });
-          (children || []).forEach(function(c) {
+          (children || []).forEach(function (c) {
             if (c) node.appendChild(c);
           });
           return node;
@@ -867,22 +931,30 @@
           }
           if (f.t === 'select') {
             input = el('select', { 'data-path': f.p, 'data-type': 'select' });
-            f.o.forEach(function(opt) {
-              input.appendChild(el('option', { value: opt, text: opt }));
+            // What the stream uses when the config doesn't set it
+            if (f.d) input.setAttribute('data-default', f.d);
+            // Options are values, or { v: value, l: label }
+            f.o.forEach(function (opt) {
+              var value = typeof opt === 'string' ? opt : opt.v;
+              input.appendChild(el('option', { value: value, text: typeof opt === 'string' ? opt : opt.l }));
             });
           } else if (f.t === 'color') {
             var text = el('input', { type: 'text', 'data-path': f.p, 'data-type': 'text', placeholder: '#FFFFFF' });
             var picker = el('input', { type: 'color', 'aria-label': f.l + ' picker' });
-            text.addEventListener('input', function() {
+            text.addEventListener('input', function () {
               if (/^#[0-9a-f]{6}$/i.test(text.value)) picker.value = text.value.toLowerCase();
             });
-            picker.addEventListener('input', function() {
+            picker.addEventListener('input', function () {
               text.value = picker.value.toUpperCase();
               markDirty();
             });
             input = el('span', { className: 'colorpair' }, [picker, text]);
           } else {
-            var attrs = { type: f.t === 'password' ? 'password' : f.t === 'number' ? 'number' : 'text', 'data-path': f.p, 'data-type': f.t };
+            var attrs = {
+              type: f.t === 'password' ? 'password' : f.t === 'number' ? 'number' : 'text',
+              'data-path': f.p,
+              'data-type': f.t
+            };
             if (f.step) attrs.step = f.step;
             else if (f.t === 'number') attrs.step = 'any';
             if (f.min !== undefined) attrs.min = f.min;
@@ -891,7 +963,11 @@
             if (f.t === 'password') attrs.autocomplete = 'new-password';
             input = el('input', attrs);
           }
-          return el('label', { className: 'field' + (f.wide ? ' wide' : '') }, [el('span', { text: f.l }), input, f.h ? el('small', { text: f.h }) : null]);
+          return el('label', { className: 'field' + (f.wide ? ' wide' : '') }, [
+            el('span', { text: f.l }),
+            input,
+            f.h ? el('small', { text: f.h }) : null
+          ]);
         }
 
         // A Common Text Object: enabled, text or label, font_size, font_color, font_border, position_x/y, (scroll)
@@ -919,21 +995,25 @@
           tabs.textContent = '';
           form.textContent = '';
 
-          TABS.forEach(function(tab, i) {
+          TABS.forEach(function (tab, i) {
             var button = el('button', { type: 'button', role: 'tab', 'aria-selected': String(i === activeTab), text: tab.title });
-            button.onclick = function() {
+            button.onclick = function () {
               switchTab(i);
             };
             tabs.appendChild(button);
             if (tab.raw) return;
 
             var pane = el('div', { 'data-tab': i, className: i === activeTab ? '' : 'hidden' });
-            tab.groups.forEach(function(g) {
+            tab.groups.forEach(function (g) {
               var fields = g.text ? textGroupFields(g) : g.fields;
               var heading = el('h3', { text: g.title + ' ' });
               if (g.restart) heading.appendChild(el('span', { className: 'restart', text: 'restart' }));
               pane.appendChild(
-                el('div', { className: 'group' }, [heading, g.h ? el('p', { className: 'note', text: g.h }) : null, el('div', { className: 'fields' }, fields.map(renderField))])
+                el('div', { className: 'group' }, [
+                  heading,
+                  g.h ? el('p', { className: 'note', text: g.h }) : null,
+                  el('div', { className: 'fields' }, fields.map(renderField))
+                ])
               );
             });
             form.appendChild(pane);
@@ -945,8 +1025,9 @@
         function fillForm(config) {
           $('settings')
             .querySelectorAll('[data-path]')
-            .forEach(function(input) {
+            .forEach(function (input) {
               var value = getPath(config, input.getAttribute('data-path'));
+              if (value === undefined && input.hasAttribute('data-default')) value = input.getAttribute('data-default');
               if (input.getAttribute('data-type') === 'bool') {
                 input.checked = isOn(value);
               } else {
@@ -967,7 +1048,7 @@
           var config = JSON.parse(JSON.stringify(currentConfig));
           $('settings')
             .querySelectorAll('[data-path]')
-            .forEach(function(input) {
+            .forEach(function (input) {
               var path = input.getAttribute('data-path');
               var type = input.getAttribute('data-type');
               var old = getPath(config, path);
@@ -1007,12 +1088,12 @@
           activeTab = i;
           $('tabs')
             .querySelectorAll('button')
-            .forEach(function(b, n) {
+            .forEach(function (b, n) {
               b.setAttribute('aria-selected', String(n === i));
             });
           $('settings')
             .querySelectorAll('[data-tab]')
-            .forEach(function(pane) {
+            .forEach(function (pane) {
               pane.classList.toggle('hidden', Number(pane.getAttribute('data-tab')) !== i);
             });
           $('raw-pane').classList.toggle('hidden', !TABS[i].raw);
@@ -1027,7 +1108,7 @@
         $('settings').addEventListener('input', markDirty);
         $('settings').addEventListener('change', markDirty);
         $('config').addEventListener('input', markDirty);
-        window.addEventListener('beforeunload', function(e) {
+        window.addEventListener('beforeunload', function (e) {
           if (dirty && auth) {
             e.preventDefault();
             e.returnValue = '';
@@ -1044,7 +1125,7 @@
         function loadConfig() {
           $('config-msg').className = 'note';
           $('config-msg').textContent = 'Loading…';
-          return api('GET', '/config').then(function(data) {
+          return api('GET', '/config').then(function (data) {
             showConfig(data.value);
             $('config-msg').textContent = '';
           });
@@ -1069,12 +1150,12 @@
           $('config-msg').className = 'note';
           $('config-msg').textContent = 'Saving…';
           api('PUT', '/config', { config: config })
-            .then(function() {
+            .then(function () {
               showConfig(config);
               $('config-msg').className = 'note ok';
               if (applyNow && !$('btn-skip').disabled) {
                 $('config-msg').textContent = 'Saved. Skipping to the next track to apply…';
-                return api('POST', '/stream/restart', {}).then(function() {
+                return api('POST', '/stream/restart', {}).then(function () {
                   $('config-msg').textContent = 'Saved and applied, the next track is starting.';
                   setTimeout(tick, 1500);
                 });
@@ -1084,13 +1165,13 @@
             .catch(showConfigError);
         }
 
-        $('btn-save').onclick = function() {
+        $('btn-save').onclick = function () {
           saveConfig(false);
         };
-        $('btn-apply').onclick = function() {
+        $('btn-apply').onclick = function () {
           saveConfig(true);
         };
-        $('btn-discard').onclick = function() {
+        $('btn-discard').onclick = function () {
           if (!dirty || confirm('Discard your unsaved changes?')) loadConfig().catch(showConfigError);
         };
 
@@ -1119,15 +1200,15 @@
           lastQueueJson = json;
           var list = $('queue');
           list.textContent = '';
-          queue.forEach(function(item, index) {
-            var remove = smallButton('Remove', function() {
+          queue.forEach(function (item, index) {
+            var remove = smallButton('Remove', function () {
               remove.disabled = true;
               // Send the path too, so a track that just started playing can't remove the wrong one
               api('POST', '/stream/queue/remove', { index: index, path: item.path })
-                .then(function(data) {
+                .then(function (data) {
                   renderQueue(data.queue);
                 })
-                .catch(function(e) {
+                .catch(function (e) {
                   $('lib-msg').textContent = e.message;
                   refreshQueue();
                 });
@@ -1142,7 +1223,7 @@
         }
 
         function refreshQueue() {
-          return api('GET', '/stream/queue').then(function(data) {
+          return api('GET', '/stream/queue').then(function (data) {
             renderQueue(data.queue);
           });
         }
@@ -1150,21 +1231,21 @@
         function queueTrack(path, playNow) {
           if (playNow && !$('btn-skip').disabled && !confirm('Stop the current track and play "' + trackName(path) + '" now?')) return;
           api('POST', '/stream/queue', { path: path, play_now: playNow })
-            .then(function(data) {
+            .then(function (data) {
               renderQueue(data.queue);
               $('lib-msg').className = 'note ok';
               $('lib-msg').textContent = playNow ? 'Starting "' + trackName(path) + '"…' : 'Queued "' + trackName(path) + '"';
               if (playNow) setTimeout(tick, 2500);
             })
-            .catch(function(e) {
+            .catch(function (e) {
               $('lib-msg').className = 'note bad';
               $('lib-msg').textContent = e.message;
             });
         }
 
-        $('btn-clear-queue').onclick = function() {
+        $('btn-clear-queue').onclick = function () {
           if (!confirm('Remove everything from the queue?')) return;
-          api('POST', '/stream/queue/clear', {}).then(function(data) {
+          api('POST', '/stream/queue/clear', {}).then(function (data) {
             renderQueue(data.queue);
           });
         };
@@ -1174,19 +1255,19 @@
           var filter = $('lib-filter').value.toLowerCase();
           var list = $('library');
           list.textContent = '';
-          var shown = libraryFiles.filter(function(f) {
+          var shown = libraryFiles.filter(function (f) {
             return !filter || fileName(f).toLowerCase().indexOf(filter) !== -1;
           });
-          shown.slice(0, 500).forEach(function(f) {
+          shown.slice(0, 500).forEach(function (f) {
             list.appendChild(
               el('li', {}, [
                 el('span', { className: 'name', text: trackName(f), title: f }),
-                smallButton('Queue', function() {
+                smallButton('Queue', function () {
                   queueTrack(f, false);
                 }),
                 smallButton(
                   'Play now',
-                  function() {
+                  function () {
                     queueTrack(f, true);
                   },
                   'primary'
@@ -1195,22 +1276,27 @@
             );
           });
           $('lib-count').textContent = libraryFiles.length
-            ? '(' + (filter ? shown.length + ' of ' : '') + libraryFiles.length + ' files' + (shown.length > 500 ? ', first 500 shown' : '') + ')'
+            ? '(' +
+              (filter ? shown.length + ' of ' : '') +
+              libraryFiles.length +
+              ' files' +
+              (shown.length > 500 ? ', first 500 shown' : '') +
+              ')'
             : '';
         }
 
-        $('btn-lib').onclick = function() {
+        $('btn-lib').onclick = function () {
           $('btn-lib').disabled = true;
           $('btn-lib').textContent = 'Loading…';
           api('GET', '/library/audio')
-            .then(function(data) {
+            .then(function (data) {
               libraryFiles = data.audio.slice().sort();
               renderLibrary();
             })
-            .catch(function(e) {
+            .catch(function (e) {
               $('lib-count').textContent = 'Could not load: ' + e.message;
             })
-            .then(function() {
+            .then(function () {
               $('btn-lib').disabled = false;
               $('btn-lib').textContent = 'Reload library';
             });
@@ -1226,7 +1312,7 @@
           var jobs = [refreshStatus(), refreshLog(), refreshQueue()];
           if (tickCount % 5 === 0) jobs.push(refreshHistory());
           tickCount++;
-          Promise.all(jobs).catch(function(e) {
+          Promise.all(jobs).catch(function (e) {
             if (e.message === 'unauthorized') return;
             $('status').className = 'pill down';
             $('status-text').textContent = 'Unreachable';
@@ -1236,7 +1322,7 @@
         // Check the credentials work, then show the console
         function enter(newAuth, remember) {
           auth = newAuth;
-          return api('GET', '/stream').then(function() {
+          return api('GET', '/stream').then(function () {
             store.set(newAuth, remember);
             $('whoami').textContent = newAuth.user ? 'Signed in as ' + newAuth.user : 'Signed in with API key';
             $('login').classList.add('hidden');
@@ -1274,18 +1360,18 @@
           showLogin(message);
         }
 
-        $('signout').onclick = function() {
-          if (auth && auth.user) api('POST', '/console/logout', {}).catch(function() {});
+        $('signout').onclick = function () {
+          if (auth && auth.user) api('POST', '/console/logout', {}).catch(function () {});
           signOut();
         };
 
-        $('toggle-mode').onclick = function(ev) {
+        $('toggle-mode').onclick = function (ev) {
           ev.preventDefault();
           keyMode = !keyMode;
           showLogin();
         };
 
-        $('login').onsubmit = function(ev) {
+        $('login').onsubmit = function (ev) {
           ev.preventDefault();
           $('login-msg').textContent = '';
           var remember = $('remember').checked;
@@ -1297,12 +1383,12 @@
           } else {
             if (!$('username').value || !$('password').value) return;
             auth = null;
-            attempt = api('POST', '/console/login', { username: $('username').value, password: $('password').value }).then(function(data) {
+            attempt = api('POST', '/console/login', { username: $('username').value, password: $('password').value }).then(function (data) {
               return enter({ header: 'Session ' + data.token, user: data.username }, remember);
             });
           }
 
-          attempt.catch(function(e) {
+          attempt.catch(function (e) {
             if (e.message === 'unauthorized') return;
             auth = null;
             $('password').value = '';
@@ -1319,7 +1405,7 @@
         var saved = store.get();
         if (saved) {
           keyMode = !saved.user;
-          enter(saved, false).catch(function(e) {
+          enter(saved, false).catch(function (e) {
             // A bad key or expired session already signed us out. For anything else (server down), keep it saved
             if (e.message === 'unauthorized') return;
             auth = null;

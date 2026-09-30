@@ -102,7 +102,24 @@ const getSessionFromRequest = request => {
   return undefined;
 };
 
+// Forget expired sessions and old failed logins, so they don't pile up in memory
+const removeExpired = () => {
+  const now = Date.now();
+  Object.keys(sessions).forEach(token => {
+    if (now > sessions[token].expires) {
+      delete sessions[token];
+    }
+  });
+  Object.keys(failedLogins).forEach(address => {
+    if (now - failedLogins[address].first > LOCKOUT_MINUTES * 60 * 1000) {
+      delete failedLogins[address];
+    }
+  });
+};
+
 const login = async (config, username, password, address) => {
+  removeExpired();
+
   if (isLockedOut(address)) {
     return [429, { message: `Too many failed logins, try again in ${LOCKOUT_MINUTES} minutes` }];
   }
@@ -138,16 +155,11 @@ const isLoopback = address => {
 // arrives from localhost, so use the client address the proxy appends to X-Forwarded-For.
 // Only the last entry is trusted: that one was added by our proxy, earlier ones can be faked.
 const getAddress = (request, config) => {
-  // fastify 1.x keeps the node request on .req
-  const raw = request.req || request.raw;
-  const address = (raw && raw.connection && raw.connection.remoteAddress) || 'unknown';
+  const address = (request.raw && request.raw.socket && request.raw.socket.remoteAddress) || 'unknown';
 
   const forwardedFor = request.headers['x-forwarded-for'];
   if (config.api && isEnabled(config.api.trust_proxy) && isLoopback(address) && typeof forwardedFor === 'string') {
-    const clientAddress = forwardedFor
-      .split(',')
-      .pop()
-      .trim();
+    const clientAddress = forwardedFor.split(',').pop().trim();
     if (clientAddress) {
       return clientAddress;
     }

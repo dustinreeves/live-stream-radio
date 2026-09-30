@@ -10,12 +10,14 @@ route: /projectmanagement/FAQ
 
 | Type | Supported Filetypes |
 | - | - |
-| Audio | `.mp3`, `.wav`, `.flac` |
-| Video | `.mp4`, `.gif`, `.avi`, `.mov`, `.mkv`, `.webm` |
+| Audio | `.mp3`, `.wav`, `.flac`, `.m4a`, `.aac`, `.ogg`, `.opus` |
+| Video | `.mp4`, `.m4v`, `.gif`, `.avi`, `.mov`, `.mkv`, `.webm` |
+
+Extensions match in any case, so `.MP3` works too. New files are picked up within a minute.
 | Font | `.ttf` |
 | Image | `.png` |
 
-In terms of encoding video, `.gif` files are the slowest as they need to be pre-encoded before encoded onto the stream.
+In terms of encoding video, `.gif` files are the slowest as they need to be pre-encoded before encoded onto the stream. Each gif is only pre-encoded once, and then reused from your temp folder (`live-stream-radio-gifs`).
 
 ## What are some reccomended technical stream settings
 

@@ -1,11 +1,11 @@
 // Interactive command to add a web console user, or change their password
-const chalk = require('chalk');
+const colors = require('./colors');
 const fs = require('fs');
 const readline = require('readline');
-const upath = require('upath');
-const editJsonFile = require('edit-json-file');
+const nodePath = require('path');
 
 const usersService = require('./api/users');
+const configFile = require('./configFile');
 
 // Ask a question on the terminal, optionally without echoing what is typed
 const ask = (question, hidden) => {
@@ -27,39 +27,41 @@ const ask = (question, hidden) => {
 };
 
 module.exports = async projectDirectory => {
-  const configPath = upath.join(process.cwd(), projectDirectory || '', 'config.json');
+  const configPath = nodePath.join(nodePath.resolve(process.cwd(), projectDirectory || '.'), 'config.json');
   if (!fs.existsSync(configPath)) {
-    console.log(`${chalk.red('Error did not find a config.json at:')} ${configPath} 😞`);
+    console.log(`${colors.red('Error did not find a config.json at:')} ${configPath} 😞`);
     process.exit(1);
   }
 
-  console.log(`${chalk.magenta('Adding a web console user to:')} ${configPath}`);
+  console.log(`${colors.magenta('Adding a web console user to:')} ${configPath}`);
 
   const username = (await ask('Username: ')).trim();
   if (!username) {
-    console.log(chalk.red('A username is required.'));
+    console.log(colors.red('A username is required.'));
     process.exit(1);
   }
 
   const password = await ask('Password: ', true);
   if (password.length < 10) {
-    console.log(chalk.red('Please use a password of at least 10 characters.'));
+    console.log(colors.red('Please use a password of at least 10 characters.'));
     process.exit(1);
   }
   const confirmPassword = await ask('Password again: ', true);
   if (password !== confirmPassword) {
-    console.log(chalk.red('The passwords did not match.'));
+    console.log(colors.red('The passwords did not match.'));
     process.exit(1);
   }
 
-  const configFile = editJsonFile(configPath);
-  const users = (configFile.get('console.users') || []).filter(user => user && user.username !== username);
-  const isNewUser = users.length === (configFile.get('console.users') || []).length;
+  const config = await configFile.readConfig(configPath);
+  const existingUsers = configFile.getValue(config, 'console.users');
+  const currentUsers = Array.isArray(existingUsers) ? existingUsers : [];
+  const users = currentUsers.filter(user => user && user.username !== username);
+  const isNewUser = users.length === currentUsers.length;
   users.push({ username: username, password_hash: await usersService.hashPassword(password) });
-  configFile.set('console.users', users);
-  configFile.save();
+  configFile.setValue(config, 'console.users', users);
+  await configFile.writeConfig(configPath, config);
 
-  console.log(chalk.green(isNewUser ? `Added console user "${username}".` : `Changed the password for "${username}".`));
+  console.log(colors.green(isNewUser ? `Added console user "${username}".` : `Changed the password for "${username}".`));
   console.log('Restarting is not needed, it is used on the next login.');
   process.exit(0);
 };
