@@ -2,7 +2,7 @@
 const fs = require('fs');
 const os = require('os');
 const upath = require('upath');
-const { isEnabled } = require('../configValues');
+const { isEnabled, projectPath } = require('../configValues');
 
 // Quote a file path for use as a filter option. Forward slashes, and the drive letter colon
 // escaped, so Windows paths like C:\radio\font.ttf work as well as Linux ones
@@ -52,7 +52,7 @@ const getOverlayTextString = async (path, config, typeKey, metadata, audioPath) 
   }
 
   const overlayConfigObject = config[typeKey].overlay;
-  const fontPath = `${path}${overlayConfigObject.font_path}`;
+  const fontPath = projectPath(path, overlayConfigObject.font_path);
   const common = metadata.common || {};
 
   // Songs without a title tag (common for podcast episodes) show their file name instead

@@ -31,7 +31,7 @@ module.exports = (fastify, path, stream, getConfig) => {
   fastify.post(
     '/stream/start',
     authService.secureRouteHandler(getConfig, async (request, reply) => {
-      preCheckResponse = preCheck(stream, getConfig, fastify, request, reply);
+      const preCheckResponse = preCheck(stream, getConfig, fastify, request, reply);
       if (preCheckResponse) {
         return preCheckResponse;
       }
@@ -51,7 +51,7 @@ module.exports = (fastify, path, stream, getConfig) => {
   fastify.post(
     '/stream/stop',
     authService.secureRouteHandler(getConfig, async (request, reply) => {
-      preCheckResponse = preCheck(stream, getConfig, fastify, request, reply);
+      const preCheckResponse = preCheck(stream, getConfig, fastify, request, reply);
       if (preCheckResponse) {
         return preCheckResponse;
       }
@@ -71,7 +71,7 @@ module.exports = (fastify, path, stream, getConfig) => {
   fastify.post(
     '/stream/restart',
     authService.secureRouteHandler(getConfig, async (request, reply) => {
-      preCheckResponse = preCheck(stream, getConfig, fastify, request, reply);
+      const preCheckResponse = preCheck(stream, getConfig, fastify, request, reply);
       if (preCheckResponse) {
         return preCheckResponse;
       }

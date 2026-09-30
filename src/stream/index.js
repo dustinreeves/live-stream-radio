@@ -1,6 +1,11 @@
 const chalk = require('chalk');
 const chalkLine = require('chalkline');
 const stream = require('./stream.js');
+const libraryService = require('../library.service');
+
+// Wait before trying again after a track fails, doubling while it keeps failing
+const MIN_RETRY_SECONDS = 2;
+const MAX_RETRY_SECONDS = 60;
 
 // Save our current path
 let currentPath = undefined;
@@ -14,7 +19,8 @@ let currentOutputLocation = undefined;
 // Save a reference to our ffmpegCommand
 let ffmpegCommandPromise = undefined;
 
-// Killing ffmpeg throws an expected error,
+// Whether the stream should be running: true from start(), including while waiting to retry
+// after an error, until stop(). Killing ffmpeg throws an expected error,
 // Thus we want to make sure we don't call our error callback if so
 let shouldListenForFfmpegErrors = false;
 
@@ -23,40 +29,79 @@ let shouldListenForFfmpegErrors = false;
 // (e.g. on skip / restart), which used to be mistaken for the new track failing.
 let streamRun = 0;
 
-// A start scheduled by restart(). Only one can be pending, so quick repeated
+// A start scheduled by restart() or a retry. Only one can be pending, so quick repeated
 // skips / play-nows can't start two streams at once
 let pendingStartTimer = undefined;
 
-// Create our calbacks for stream end and error
-const errorCallback = (err, stdout, stderr) => {
-  // Check if we should respond to the error
-  if (shouldListenForFfmpegErrors) {
-    console.log('\n');
-    chalkLine.red();
-    console.log('\n');
-    console.log(chalk.red('ffmpeg stderr:'), '\n\n', stderr);
-    console.log(chalk.red('ffmpeg stdout:'), '\n\n', stdout);
-    console.log(chalk.red('ffmpeg err:'), '\n\n', err);
-    console.log('\n');
-    console.log(`${chalk.red('ffmpeg encountered an error.')} 😨`);
-    console.log(`Please see the stderror output above to fix the issue.`);
-    console.log('\n');
+// Tracks that failed in a row, reset when one plays to the end
+let consecutiveFailures = 0;
 
-    // Exit everything
-    process.exit(1);
-  }
+const scheduleStart = delayMilliseconds => {
+  clearTimeout(pendingStartTimer);
+  pendingStartTimer = setTimeout(() => {
+    pendingStartTimer = undefined;
+    moduleExports.start();
+  }, delayMilliseconds);
 };
 
-const endCallback = () => {
-  // Simply start a new stream
+// Keep the station up after a failed track (a bad file, the stream server dropping us, ...),
+// and try again with another track, waiting longer while it keeps failing
+const retryAfterFailure = () => {
+  consecutiveFailures++;
+  const delaySeconds = Math.min(MAX_RETRY_SECONDS, MIN_RETRY_SECONDS * Math.pow(2, consecutiveFailures - 1));
+  console.log(`${chalk.yellow(`Trying again in ${delaySeconds} seconds`)} (${consecutiveFailures} failed in a row) 🔁`);
   console.log('\n');
-  moduleExports.start();
+
+  // A file may have been removed, look again
+  libraryService.clearCache();
+  scheduleStart(delaySeconds * 1000);
+};
+
+// Create our calbacks for stream end and error
+const logFfmpegError = (err, stdout, stderr) => {
+  console.log('\n');
+  chalkLine.red();
+  console.log('\n');
+  console.log(chalk.red('ffmpeg stderr:'), '\n\n', stderr);
+  console.log(chalk.red('ffmpeg stdout:'), '\n\n', stdout);
+  console.log(chalk.red('ffmpeg err:'), '\n\n', err);
+  console.log('\n');
+  console.log(`${chalk.red('ffmpeg encountered an error.')} 😨`);
+  console.log(`Please see the stderror output above to fix the issue.`);
+  console.log('\n');
+};
+
+// Wait until a process is no longer running
+const waitForExit = pid => {
+  const isRunning = require('is-running');
+  return new Promise(resolve => {
+    const check = () => {
+      if (isRunning(pid)) {
+        setTimeout(check, 250);
+      } else {
+        resolve();
+      }
+    };
+    check();
+  });
+};
+
+// Kill a started ffmpeg command, and wait for it to exit
+const killCommand = async ffmpegCommand => {
+  const ffmpegProc = ffmpegCommand && ffmpegCommand.ffmpegProc;
+  if (!ffmpegProc) {
+    return;
+  }
+  const pid = ffmpegProc.pid;
+  ffmpegCommand.kill();
+  await waitForExit(pid);
 };
 
 // Create our exports
 const moduleExports = {
+  // Start playing the next track. Never throws: a track that can't be started is retried
   start: async (path, getConfig, outputLocation) => {
-    // Starting now replaces any start a restart scheduled
+    // Starting now replaces any start a restart or retry scheduled
     clearTimeout(pendingStartTimer);
     pendingStartTimer = undefined;
 
@@ -78,104 +123,111 @@ const moduleExports = {
       currentOutputLocation = outputLocation;
     }
 
-    // Get our config, this will refresh on every song
-    let config = await currentGetConfig();
-
-    // Work around fluent-ffmpeg not understanding newer ffmpeg's format list
-    await require('./ffmpegCompat')(config);
-
-    //  Build our stream outputs, from the config every time so url / key changes apply on the next song
-    let streamOutput = currentOutputLocation;
-    if (!streamOutput) {
-      if (config.stream_outputs) {
-        streamOutput = config.stream_outputs;
-      } else {
-        if (!config.stream_url || !config.stream_key) {
-          console.log(`${chalk.red('Missing stream_url or stream_key in your config.json !')} 😟`);
-          console.log(chalk.red('Exiting...'));
-          console.log('\n');
-          process.exit(1);
-        }
-
-        let streamUrl = config.stream_url;
-        streamUrl = streamUrl.replace('$stream_key', config.stream_key);
-        streamOutput = streamUrl;
-      }
-    }
-
-    // Don't print the stream key into the logs, they are visible in the web console
-    let loggedOutputLocation = String(streamOutput);
-    if (config.stream_key) {
-      loggedOutputLocation = loggedOutputLocation.split(config.stream_key).join('<stream_key>');
-    }
-    console.log(`${chalk.magenta('Streaming to:')} ${loggedOutputLocation}`);
-    console.log('\n');
-
     // Listen for errors again
     shouldListenForFfmpegErrors = true;
 
     // Only let this run's ffmpeg end or fail the stream while it is the current one
     const run = ++streamRun;
+    const isCurrentRun = () => run === streamRun;
+
     const runEndCallback = () => {
-      if (run === streamRun) {
-        endCallback();
+      if (isCurrentRun()) {
+        consecutiveFailures = 0;
+        // Simply start a new stream
+        console.log('\n');
+        moduleExports.start();
       }
     };
     const runErrorCallback = (err, stdout, stderr) => {
-      if (run === streamRun) {
-        errorCallback(err, stdout, stderr);
+      if (isCurrentRun() && shouldListenForFfmpegErrors) {
+        // Nothing else from this run should start a track
+        streamRun++;
+        ffmpegCommandPromise = undefined;
+        logFfmpegError(err, stdout, stderr);
+        retryAfterFailure();
       }
     };
 
-    // Start the stream again
-    ffmpegCommandPromise = stream(currentPath, config, streamOutput, runEndCallback, runErrorCallback);
-    await ffmpegCommandPromise;
+    try {
+      // Get our config, this will refresh on every song
+      const config = await currentGetConfig();
+
+      // Work around fluent-ffmpeg not understanding newer ffmpeg's format list
+      await require('./ffmpegCompat')(config);
+
+      //  Build our stream outputs, from the config every time so url / key changes apply on the next song
+      let streamOutput = currentOutputLocation;
+      if (!streamOutput) {
+        if (config.stream_outputs) {
+          streamOutput = config.stream_outputs;
+        } else {
+          if (!config.stream_url || !config.stream_key) {
+            throw new Error('Missing stream_url or stream_key in your config.json');
+          }
+
+          streamOutput = config.stream_url.replace('$stream_key', config.stream_key);
+        }
+      }
+
+      // Don't print the stream key into the logs, they are visible in the web console
+      let loggedOutputLocation = String(streamOutput);
+      if (config.stream_key) {
+        loggedOutputLocation = loggedOutputLocation.split(config.stream_key).join('<stream_key>');
+      }
+      console.log(`${chalk.magenta('Streaming to:')} ${loggedOutputLocation}`);
+      console.log('\n');
+
+      // Stopped (or restarted) while getting ready
+      if (!isCurrentRun()) {
+        return;
+      }
+
+      // Start the stream again. A stop from here on waits for this promise, and kills what it started
+      ffmpegCommandPromise = stream(currentPath, config, streamOutput, runEndCallback, runErrorCallback);
+      await ffmpegCommandPromise;
+    } catch (e) {
+      if (!isCurrentRun()) {
+        return;
+      }
+      ffmpegCommandPromise = undefined;
+      console.log(`${chalk.red('Could not start the track:')} ${e.message} 😟`);
+      console.log('\n');
+      retryAfterFailure();
+    }
   },
   // Stop, then start again (with the next track) a second later
   restart: async () => {
     if (moduleExports.isRunning()) {
       await moduleExports.stop();
     }
-    clearTimeout(pendingStartTimer);
     // Wrap in a set timeout, that way it wont crash and ffmpeg can continue
-    pendingStartTimer = setTimeout(() => {
-      pendingStartTimer = undefined;
-      moduleExports.start();
-    }, 1000);
+    scheduleStart(1000);
   },
   stop: async () => {
     console.log('\n');
     console.log(`${chalk.magenta('Stopping stream...')} ✋`);
     console.log('\n');
 
-    // A stop wins over a restart that hasn't started yet
+    // A stop wins over a restart or retry that hasn't started yet
     clearTimeout(pendingStartTimer);
     pendingStartTimer = undefined;
+    consecutiveFailures = 0;
 
     shouldListenForFfmpegErrors = false;
     // Anything the current ffmpeg reports from now on is from a stream we stopped on purpose
     streamRun++;
-    if (ffmpegCommandPromise) {
-      // Get our command, its pid, and kill it.
-      const ffmpegCommand = await ffmpegCommandPromise;
-      const ffmpegCommandPid = ffmpegCommand.ffmpegProc.pid;
-      ffmpegCommand.kill();
-      ffmpegCommandPromise = undefined;
 
-      // Wait until the pid is no longer running
-      const isRunning = require('is-running');
-      await new Promise(resolve => {
-        const waitForPidToBeKilled = () => {
-          if (isRunning(ffmpegCommandPid)) {
-            setTimeout(() => {
-              waitForPidToBeKilled();
-            }, 250);
-          } else {
-            resolve();
-          }
-        };
-        waitForPidToBeKilled();
-      });
+    const commandPromise = ffmpegCommandPromise;
+    ffmpegCommandPromise = undefined;
+    if (commandPromise) {
+      // Get our command, and kill it
+      let ffmpegCommand = undefined;
+      try {
+        ffmpegCommand = await commandPromise;
+      } catch (e) {
+        // The track never started, so there is nothing to kill
+      }
+      await killCommand(ffmpegCommand);
     }
 
     require('../status.service').clearProgress();

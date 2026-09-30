@@ -40,6 +40,7 @@ module.exports = {
       fastify.listen(config.api.port, config.api.host, (err, address) => {
         if (err) {
           reject(err);
+          return;
         }
         console.log('\n');
         console.log(`${chalk.blue('API Started at:')} ${address}`);
