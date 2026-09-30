@@ -10,7 +10,9 @@ _formerly known as piStreamRadio._
 
 `live-stream-radio` is a 24/7 live stream video radio station 📹 📻 CLI built with [Node.js](https://nodejs.org/) and powered by [FFmpeg](http://ffmpeg.org). Meaning, This will allow for live streaming a video of music, playing over a video/gif, with the music information, and other overlay items 🖼️. Music and video are chosen from their respective folders in a defined `config.json` that can be generated using the CLI. Generated projects come included with some songs and videos to get up and running quickly! Also, this project has a REST HTTP JSON Api, to allow for interfacing with your stream using a frontend 👩‍💻.
 
-> **This is a maintained fork** of [torch2424/live-stream-radio](https://github.com/torch2424/live-stream-radio), which was archived in 2022. It adds a built-in [web console](#web-console) for running your station from a browser, plus the fixes listed under [Changes in this fork](#changes-in-this-fork). Existing projects and `config.json` files work unchanged.
+> **This is a fork** of [torch2424/live-stream-radio](https://github.com/torch2424/live-stream-radio), which was archived in 2022. It adds a built-in [web console](#web-console) for running your station from a browser, plus the fixes listed under [Changes in this fork](#changes-in-this-fork). Existing projects and `config.json` files work unchanged.
+
+> [!WARNING] > **🤖 AI SLOP ALERT 🤖** Everything added in this fork (the web console, the login system, the settings form, the bug fixes, and yes, this README) was written by an AI (Claude), with a human pointing at things and saying "do that". It has been run on exactly one Windows PC against the sample songs, and not yet on a real station. It might be fine. It might set your stream on fire. Read the code before you trust it with your stream key, and please open an issue when it inevitably does something dumb.
 
 # Table of Contents
 
@@ -63,17 +65,19 @@ The console signs in with a password and then sends a session token with every r
 
 ## When changes apply
 
-| Setting | Takes effect |
-| - | - |
+| Setting                                                               | Takes effect                                                                    |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | On-screen text, image, interludes, folders, quality, stream URL / key | From the next track. _Save & apply now_ in the console skips to it immediately. |
-| `api.host`, `api.port`, `api.key`, `api.number_of_history_items` | After restarting the process (e.g. `sudo systemctl restart my-radio.service`). |
-| Console users and `console.session_hours` | On the next sign in. |
+| `api.host`, `api.port`, `api.key`, `api.number_of_history_items`      | After restarting the process (e.g. `sudo systemctl restart my-radio.service`).  |
+| Console users and `console.session_hours`                             | On the next sign in.                                                            |
 
 Sessions last `console.session_hours` (default 12) and end if the process restarts. After 5 wrong passwords from one address, sign-ins from it are refused for 15 minutes.
 
 New API endpoints used by the console (`GET /stream/status`, `GET /stream/log`, `PUT /config`, `POST /console/login`, `POST /console/logout`) are documented in [src/api/endpoints.mdx](./src/api/endpoints.mdx).
 
 # Changes in this fork
+
+_All AI-written, see the warning at the top._
 
 - **Web console** with username / password sign-in, as above.
 - **Config changes apply without a restart.** Before, `config.json` was cached when the process started, so edits (by hand or through `POST /config`) were ignored until a restart. It is now re-read at the start of every track, including the stream URL and key.
