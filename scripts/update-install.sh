@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Update an existing global install of live-stream-radio (npm install -g) to this fork.
+# Update an existing global install of podcast-radio (formerly live-stream-radio, installed with npm install -g) to this fork.
 #
 # Run it on the server as the user that runs the stream (not root, it uses sudo when needed):
-#   curl -fsSLO https://raw.githubusercontent.com/dustinreeves/live-stream-radio/master/scripts/update-install.sh
+#   curl -fsSLO https://raw.githubusercontent.com/dustinreeves/podcast-radio/master/scripts/update-install.sh
 #   bash update-install.sh [systemd service ...]
 # e.g.
 #   bash update-install.sh cowardradio doomradio
@@ -13,7 +13,7 @@
 
 set -euo pipefail
 
-REPO="dustinreeves/live-stream-radio"
+REPO="dustinreeves/podcast-radio"
 BRANCH="${LSR_BRANCH:-master}"
 SERVICES=("$@")
 
@@ -31,12 +31,12 @@ done
 
 # --- Find the current install -------------------------------------------------------------------
 
-BIN="$(command -v live-stream-radio || true)"
-[ -n "$BIN" ] || die "live-stream-radio is not on the PATH. Is it installed with npm install -g?"
-ENTRY="$(readlink -f "$BIN")" # .../live-stream-radio/src/index.js
+BIN="$(command -v podcast-radio || command -v live-stream-radio || true)"
+[ -n "$BIN" ] || die "Neither podcast-radio nor live-stream-radio is on the PATH. Is it installed with npm install -g?"
+ENTRY="$(readlink -f "$BIN")" # .../podcast-radio/src/index.js (or live-stream-radio/src/index.js)
 INSTALL_DIR="$(cd "$(dirname "$ENTRY")/.." && pwd)"
-grep -q '"name": "live-stream-radio"' "$INSTALL_DIR/package.json" 2> /dev/null ||
-  die "Found $BIN, but $INSTALL_DIR doesn't look like a live-stream-radio install."
+grep -qE '"name": "(podcast-radio|live-stream-radio)"' "$INSTALL_DIR/package.json" 2> /dev/null ||
+  die "Found $BIN, but $INSTALL_DIR doesn't look like a podcast-radio (or live-stream-radio) install."
 OLD_VERSION="$(node -p "require('$INSTALL_DIR/package.json').version")"
 if [ -f "$INSTALL_DIR/src/console/index.html" ]; then
   OLD_KIND="this fork (has the web console)"
@@ -64,9 +64,9 @@ done
 
 # --- Show the plan and ask ----------------------------------------------------------------------
 
-BACKUP_DIR="$HOME/live-stream-radio-backup-$(date +%Y%m%d-%H%M%S)"
+BACKUP_DIR="$HOME/podcast-radio-backup-$(date +%Y%m%d-%H%M%S)"
 
-say "Found live-stream-radio $OLD_VERSION, $OLD_KIND"
+say "Found $(basename "$BIN") $OLD_VERSION, $OLD_KIND"
 echo "    install:  $INSTALL_DIR"
 echo "    node:     $NODE_VERSION"
 echo "    ffmpeg:   ${FFMPEG_LINE:-not on PATH}"
@@ -122,7 +122,14 @@ done
 $SUDO chmod +x "$INSTALL_DIR/src/index.js"
 
 # Quick check that it loads
-live-stream-radio --version > /dev/null || die "The new install doesn't start. Roll back with the steps below."
+# npm only linked the command it was installed with. Link both names, so the new podcast-radio command works,
+# and live-stream-radio keeps working for existing systemd services
+BIN_DIR="$(dirname "$BIN")"
+for command in podcast-radio live-stream-radio; do
+  [ -e "$BIN_DIR/$command" ] || $SUDO ln -s "$INSTALL_DIR/src/index.js" "$BIN_DIR/$command"
+done
+
+"$BIN_DIR/podcast-radio" --version > /dev/null || die "The new install doesn't start. Roll back with the steps below."
 node -e "require('$INSTALL_DIR/src/api/index.js')" ||
   die "The new install doesn't load. Roll back with the steps below."
 
@@ -158,7 +165,7 @@ echo "    $ROLLBACK"
 echo
 echo "Next steps:"
 echo "  - Add a web console user (in the folder you run the stream from):"
-echo "      live-stream-radio --set-password <project folder>"
+echo "      podcast-radio --set-password <project folder>"
 echo "  - Reach the console: see 'Reaching it from another computer' in"
 echo "      $INSTALL_DIR/README.md  (SSH tunnel, or HTTPS with $INSTALL_DIR/proxy/)"
 echo "  - Watch the stream log:  sudo journalctl -fu <service>"

@@ -1,16 +1,12 @@
-# live-stream-radio
+# podcast-radio
 
-_formerly known as piStreamRadio._
-
-![Galaxy Noise Radio Live Stream link](https://files.aaronthedev.com/$/zk7xg)
-
-[CLI Usage Screenshot](./docz/assets/CLIUsage.png) 🖼️
+_formerly live-stream-radio, and before that piStreamRadio._
 
 [Documentation](./src/index.mdx) 📚
 
-`live-stream-radio` is a 24/7 live stream video radio station 📹 📻 CLI built with [Node.js](https://nodejs.org/) and powered by [FFmpeg](http://ffmpeg.org). Meaning, This will allow for live streaming a video of music, playing over a video/gif, with the music information, and other overlay items 🖼️. Music and video are chosen from their respective folders in a defined `config.json` that can be generated using the CLI. Generated projects come included with some songs and videos to get up and running quickly! Also, this project has a REST HTTP JSON Api, to allow for interfacing with your stream using a frontend 👩‍💻.
+`podcast-radio` runs a 24/7 live stream of your podcast 🎙️ 📺 on YouTube, Twitch, or anywhere that takes RTMP. Episodes play one after another over a looping video or image, with the show and episode info on screen. Every episode plays before any repeats (or play them in order), and a restart carries on where it left off. It includes a [web console](#web-console) for running the stream from a browser and a REST HTTP JSON API. It's a CLI built with [Node.js](https://nodejs.org/) and powered by [FFmpeg](http://ffmpeg.org). Generated projects come with some sample audio and videos to get up and running quickly.
 
-> **This is a fork** of [torch2424/live-stream-radio](https://github.com/torch2424/live-stream-radio), which was archived in 2022. It adds a built-in [web console](#web-console) for running your station from a browser, plus the fixes listed under [Changes in this fork](#changes-in-this-fork). Existing projects and `config.json` files work unchanged.
+> **This is a fork** of [torch2424/live-stream-radio](https://github.com/torch2424/live-stream-radio), which was archived in 2022, reworked for podcasts. It adds the [web console](#web-console) plus the changes listed under [Changes in this fork](#changes-in-this-fork). Existing projects and `config.json` files work unchanged, and the old `live-stream-radio` command still works.
 
 <!-- prettier-ignore -->
 > [!WARNING]
@@ -29,19 +25,19 @@ _formerly known as piStreamRadio._
 
 # Getting Started
 
-Please see the [Documentation](./src/index.mdx) 📚 for how to get started using `live-stream-radio`. In particular, the [Installation Guide](./src/stream/gettingstarted.mdx) and [CLI Usage](./src/stream/usage.mdx) will be the most useful to new users. 😄
+Please see the [Documentation](./src/index.mdx) 📚 for how to get started using `podcast-radio`. In particular, the [Installation Guide](./src/stream/gettingstarted.mdx) and [CLI Usage](./src/stream/usage.mdx) will be the most useful to new users. 😄
 
 You need [Node.js](https://nodejs.org/) 22 or newer and [FFmpeg](https://ffmpeg.org/) (built with libfreetype, for the on-screen text). Install this fork with:
 
 ```
-npm install -g github:dustinreeves/live-stream-radio
+npm install -g github:dustinreeves/podcast-radio
 ```
 
-To update a server that already runs `live-stream-radio`, use [scripts/update-install.sh](./scripts/update-install.sh). It backs up the current install, installs this fork and its dependencies, restarts your services, and prints how to roll back.
+To update a server that already runs `podcast-radio` (or `live-stream-radio`), use [scripts/update-install.sh](./scripts/update-install.sh). It backs up the current install, installs this fork and its dependencies, restarts your services, and prints how to roll back.
 
 # Web Console
 
-A browser page, served by `live-stream-radio` itself, for running the station without a shell:
+A browser page, served by `podcast-radio` itself, for running the station without a shell:
 
 - **Control** – start, stop and skip the current track.
 - **Now playing** – the current track, its progress, and ffmpeg's live fps and bitrate.
@@ -57,7 +53,7 @@ Nothing extra to install: no build step and no new dependencies.
 1. **Add a console user** on the machine running the stream. You'll be asked for a username and a password (at least 10 characters, typed hidden):
 
    ```bash
-   live-stream-radio --set-password my-radio-project
+   podcast-radio --set-password my-radio-project
    ```
 
    Run it again with the same username to change that user's password. Users are stored in the project's `config.json` under `console.users`, with the passwords hashed (pbkdf2).
@@ -85,7 +81,7 @@ In short:
 
 1. Point a DNS name (e.g. `radio.example.com`) at the server.
 2. Copy the config, replacing `radio.example.com` (and `8000` if you changed `api.port`).
-3. In `config.json`, add `"trust_proxy": true` to the `api` section, keeping `"host": "localhost"`, and restart `live-stream-radio`. Behind a proxy every request comes from localhost; this makes the login lockout use each visitor's real address (from `X-Forwarded-For`), so someone else guessing passwords can't lock you out. Only turn it on behind a proxy.
+3. In `config.json`, add `"trust_proxy": true` to the `api` section, keeping `"host": "localhost"`, and restart `podcast-radio`. Behind a proxy every request comes from localhost; this makes the login lockout use each visitor's real address (from `X-Forwarded-For`), so someone else guessing passwords can't lock you out. Only turn it on behind a proxy.
 4. Open `https://radio.example.com`, which redirects to the console.
 
 ### SSH tunnel
@@ -125,7 +121,8 @@ _All AI-written, see the warning at the top._
 - **Quick skips can't leave two ffmpegs running.** Stopping or skipping right after a track started could crash, or leave an ffmpeg streaming that nothing tracked.
 - **History keeps the newest tracks.** After 100 tracks, history kept only the first track ever played, and showed it as playing now.
 - **Every generated project gets its own api key**, instead of the shared `super-secret-api-key`, which is refused when the api can be reached from other computers.
-- **Absolute project folders work**, e.g. `live-stream-radio /srv/radio`.
+- **Absolute project folders work**, e.g. `podcast-radio /srv/radio`.
+- **Renamed to `podcast-radio`.** The command, package and repository are now `podcast-radio`. `live-stream-radio` still works as a second name for the command, so existing services don't need changing.
 - **No repeats.** Episodes are shuffled so every one plays once before any repeats (`play_order`), or can play in order by file name, and a restart carries on the same round. Before, each track was picked at random, so the same one could play twice in a row.
 - **More audio formats** (`.m4a`, `.aac`, `.ogg`, `.opus`), extensions in any case, and folders are scanned once a minute rather than for every track.
 - **Gifs are converted once** and reused, and temp files are cleaned up.
@@ -136,17 +133,19 @@ _All AI-written, see the warning at the top._
 
 _For building your own API frontend, please see the [API Documentation](./src/api/endpoints.mdx) 📚 on API Endpoints._
 
-This fork includes one: the [web console](#web-console) at `/console`. Other frontends are welcome too! If you make a `live-stream-radio` frontend, please open an issue and so we can add the project here 😄!
+This fork includes one: the [web console](#web-console) at `/console`. Other frontends are welcome too! If you make a `podcast-radio` frontend, please open an issue and so we can add the project here 😄!
 
 # Other Notable Projects
+
+These were built for the original `live-stream-radio`, and its API is unchanged.
 
 - [live-stream-radio control](https://github.com/BaileyMcKelway/live-stream-radio-api-frontend) - Web control for `live-stream-radio` for streams on Twitch.
 - [lsr-wrapper](https://github.com/LSRemote/lsr-wrapper) - A Promise based wrapper around the `live-stream-radio` api.
 - [live-stream-radio-cp](https://github.com/Tresmos/live-stream-radio-cp) - Simple web control panel for live-stream-radio.
 
-# Radios built with `live-stream-radio`
+# Streams built with `podcast-radio`
 
-Please feel free to share your radio if you are using `live-stream-radio`. Just open an issue, and we can add it to the README. 😄
+Please feel free to share your stream if you are using `podcast-radio`. Just open an issue, and we can add it to the README. 😄
 
 # Compatibility
 

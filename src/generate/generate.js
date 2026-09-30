@@ -7,11 +7,11 @@ const nodePath = require('path');
 module.exports = projectName => {
   // Add a default project name if none
   if (!projectName) {
-    projectName = 'live-stream-radio';
+    projectName = 'podcast-radio';
   }
 
   // Inform user of project creation
-  console.log('🎵', colors.green('Generating a new pi-stream-radio project in:'), colors.blue(projectName), '🎵');
+  console.log('🎵', colors.green('Generating a new podcast-radio project in:'), colors.blue(projectName), '🎵');
 
   // Create our new project directory, relative to where we are or absolute
   const newProjectPath = nodePath.resolve(process.cwd(), projectName);

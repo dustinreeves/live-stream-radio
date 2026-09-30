@@ -12,15 +12,15 @@ All Api Endpoints require the API key within the `config.json` to make / return 
 
 The API Key can be provided in 3 ways:
 
-* Through an `Authorization` Header.
+- Through an `Authorization` Header.
 
 `Authorization: my-api-key`
 
-* Through the `api_key` query paramater
+- Through the `api_key` query paramater
 
 `localhost:3000/stream?api_key=my-api-key`
 
-* Through the `api_key` POST body
+- Through the `api_key` POST body
 
 ```
 {
@@ -158,7 +158,7 @@ This will return information about all found audio files in the project by follo
 
 ### Query Params
 
-* `include_metadata` - if true, will also include the common metadata for the found audio files.
+- `include_metadata` - if true, will also include the common metadata for the found audio files.
 
 ### Example Successful Response
 
@@ -203,17 +203,21 @@ Returns a param of the config.json. If no key is set, all config params will be 
 
 ### Query Params
 
-* `key` - The config key in dot-notation (example: 'api.host', 'interlude.overlay.enabled')
+- `key` - The config key in dot-notation (example: 'api.host', 'interlude.overlay.enabled')
 
 ### Example Response:
+
 **HTTP 200** - Successful
+
 ```
 {
     "key": "interlude.enabled",
     "value": true
 }
 ```
+
 **HTTP 404** - Key not existant
+
 ```
 {
     "key": "interlude.awesomeness_level",
@@ -229,11 +233,13 @@ Changes a config param in the config.json. If they key has no value, it will be 
 
 ### Body Params
 
-* `key` - The config key in dot-notation (example: 'api.host', 'interlude.overlay.enabled')
-* `value` - The new value for the config in json (example: (string) "test", (number) 5, (boolean) true)
+- `key` - The config key in dot-notation (example: 'api.host', 'interlude.overlay.enabled')
+- `value` - The new value for the config in json (example: (string) "test", (number) 5, (boolean) true)
 
 ### Example Response:
+
 **HTTP 200** - Successful
+
 ```
 {
     "response": {
@@ -243,7 +249,9 @@ Changes a config param in the config.json. If they key has no value, it will be 
     }
 }
 ```
+
 **HTTP 200** - Key not existant, new key will be saved
+
 ```
 {
     "response": {
@@ -252,8 +260,8 @@ Changes a config param in the config.json. If they key has no value, it will be 
     }
 }
 ```
-**HTTP 400** - `value` is not JSON, the key is not valid (e.g. `__proto__`), or the change would leave a config the stream can't run
 
+**HTTP 400** - `value` is not JSON, the key is not valid (e.g. `__proto__`), or the change would leave a config the stream can't run
 
 ## PUT /config
 
@@ -263,16 +271,19 @@ Replaces the whole config.json. The previous file is kept as `config.json.bak`. 
 
 ### Body Params
 
-* `config` - The complete new config, as a JSON object. It must keep its `api` section, and a `radio` section (and `interlude`, when enabled) with `audio_directory` and `video_directory`.
+- `config` - The complete new config, as a JSON object. It must keep its `api` section, and a `radio` section (and `interlude`, when enabled) with `audio_directory` and `video_directory`.
 
 ### Example Response:
+
 **HTTP 200** - Successful
+
 ```
 {
     "message": "OK",
     "backup": "config.json.bak"
 }
 ```
+
 **HTTP 400** - Not an object, or missing one of the sections above
 
 ## GET /stream/status
@@ -305,7 +316,7 @@ Returns up to the last 500 lines of console output, with color codes removed.
 
 ### Query Params
 
-* `since` - (optional) Only return lines with an `id` greater than this.
+- `since` - (optional) Only return lines with an `id` greater than this.
 
 ### Example Successful Response:
 
@@ -326,7 +337,7 @@ The web console: a page for remotely controlling the stream (start / stop / skip
 Add a console user (or change their password) on the machine running the stream:
 
 ```
-live-stream-radio --set-password [Project Name/Directory]
+podcast-radio --set-password [Project Name/Directory]
 ```
 
 This stores the username and a hashed password in `console.users` in the config.json. Signed in sessions last `console.session_hours` (default 12) and end when the stream process restarts. After 5 wrong passwords from one address, logins from it are refused for 15 minutes.
@@ -343,11 +354,13 @@ Signs in a web console user. Does not need the api key.
 
 ### Body Params
 
-* `username`
-* `password`
+- `username`
+- `password`
 
 ### Example Response:
+
 **HTTP 200** - Successful. Send the token as `Authorization: Session <token>` on other requests.
+
 ```
 {
     "token": "3f9a...",
@@ -355,6 +368,7 @@ Signs in a web console user. Does not need the api key.
     "expires": 1790043200000
 }
 ```
+
 **HTTP 401** - Wrong username or password
 **HTTP 429** - Too many failed logins from this address
 
@@ -388,11 +402,12 @@ Queues a track. Only files listed by `GET /library/audio` can be queued. Queued 
 
 ### Body Params
 
-* `path` - A path exactly as returned by `GET /library/audio`
-* `play_next` - (optional) `true` to put it at the front of the queue
-* `play_now` - (optional) `true` to put it at the front and skip to it straight away
+- `path` - A path exactly as returned by `GET /library/audio`
+- `play_next` - (optional) `true` to put it at the front of the queue
+- `play_now` - (optional) `true` to put it at the front and skip to it straight away
 
 ### Example Response:
+
 **HTTP 200** - The updated queue, as for `GET /stream/queue`
 **HTTP 400** - The track isn't in the library, or the queue is full (200 tracks)
 
@@ -400,8 +415,8 @@ Queues a track. Only files listed by `GET /library/audio` can be queued. Queued 
 
 ### Body Params
 
-* `index` - Position in the queue, from 0
-* `path` - (optional) Only remove it if this is still the track at `index`, otherwise **HTTP 409**
+- `index` - Position in the queue, from 0
+- `path` - (optional) Only remove it if this is still the track at `index`, otherwise **HTTP 409**
 
 ## POST /stream/queue/clear
 

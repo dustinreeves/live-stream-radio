@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <title>Radio Console</title>
+    <title>Podcast Radio Console</title>
     <style>
       :root {
         --bg: #f6f6f4;
@@ -392,7 +392,7 @@
   <body>
     <main>
       <form id="login" class="panel hidden">
-        <h1 style="margin-bottom: 12px">Radio Console</h1>
+        <h1 style="margin-bottom: 12px">Podcast Radio Console</h1>
         <p id="insecure" class="note bad hidden" style="margin-top: 0">
           This connection isn't encrypted, so your password could be read on the way. Use HTTPS (see proxy/ in the project) or an SSH
           tunnel.
@@ -416,7 +416,7 @@
 
       <div id="app" class="hidden">
         <header>
-          <h1>Radio Console</h1>
+          <h1>Podcast Radio Console</h1>
           <span id="status" class="pill"><span class="dot"></span><span id="status-text">Connecting…</span></span>
           <span id="whoami" class="note"></span>
           <button id="signout" type="button">Sign out</button>
@@ -877,7 +877,7 @@
               },
               {
                 title: 'Console',
-                h: 'Add users or change passwords on the server with: live-stream-radio --set-password <project folder>',
+                h: 'Add users or change passwords on the server with: podcast-radio --set-password <project folder>',
                 fields: [{ p: 'console.session_hours', t: 'number', l: 'Stay signed in (hours)', ph: '12' }]
               }
             ]

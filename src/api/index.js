@@ -24,7 +24,11 @@ module.exports = {
     // Create our base "Hello world" route
     fastify.get('/', async (request, reply) => {
       reply.type('application/json').code(200);
-      return { live_stream_radio: 'Please see documentation for endpoints and usage' };
+      // live_stream_radio is kept for clients written for the old name
+      return {
+        podcast_radio: 'Please see documentation for endpoints and usage',
+        live_stream_radio: 'Please see documentation for endpoints and usage'
+      };
     });
 
     // Implement our other routes

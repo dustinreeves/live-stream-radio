@@ -1,10 +1,10 @@
-# Caddy reverse proxy for the live-stream-radio web console, with automatic HTTPS.
+# Caddy reverse proxy for the podcast-radio web console, with automatic HTTPS.
 # Caddy gets and renews the certificate from Let's Encrypt by itself.
 #
 # 1. Point a DNS record (e.g. radio.example.com) at this server, and open ports 80 and 443.
 # 2. Replace radio.example.com below, and 8000 if you changed api.port.
 # 3. In your project's config.json, keep "host": "localhost" and add "trust_proxy": true
-#    to the "api" section, then restart live-stream-radio.
+#    to the "api" section, then restart podcast-radio.
 # 4. Install it (Ubuntu / Debian: https://caddyserver.com/docs/install), then:
 #      sudo cp Caddyfile /etc/caddy/Caddyfile
 #      sudo systemctl reload caddy

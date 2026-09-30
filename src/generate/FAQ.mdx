@@ -8,16 +8,16 @@ route: /projectmanagement/FAQ
 
 ## What are the Supported File Types
 
-| Type | Supported Filetypes |
-| - | - |
+| Type  | Supported Filetypes                                      |
+| ----- | -------------------------------------------------------- |
 | Audio | `.mp3`, `.wav`, `.flac`, `.m4a`, `.aac`, `.ogg`, `.opus` |
-| Video | `.mp4`, `.m4v`, `.gif`, `.avi`, `.mov`, `.mkv`, `.webm` |
+| Video | `.mp4`, `.m4v`, `.gif`, `.avi`, `.mov`, `.mkv`, `.webm`  |
 
 Extensions match in any case, so `.MP3` works too. New files are picked up within a minute.
 | Font | `.ttf` |
 | Image | `.png` |
 
-In terms of encoding video, `.gif` files are the slowest as they need to be pre-encoded before encoded onto the stream. Each gif is only pre-encoded once, and then reused from your temp folder (`live-stream-radio-gifs`).
+In terms of encoding video, `.gif` files are the slowest as they need to be pre-encoded before encoded onto the stream. Each gif is only pre-encoded once, and then reused from your temp folder (`podcast-radio-gifs`).
 
 ## What are some reccomended technical stream settings
 
@@ -31,17 +31,16 @@ Audio metadata is collected using [music-metadata](https://www.npmjs.com/package
 
 The overlays are layered over one another in the following order:
 
-* Video (bottom)
-* Image
-* Text (top)
+- Video (bottom)
+- Image
+- Text (top)
 
-Also, as a comparison to CSS z-index, The video could be 0, the image could be 1, and the text could be 2. 
+Also, as a comparison to CSS z-index, The video could be 0, the image could be 1, and the text could be 2.
 
 Also, this means that if we enabled the image overlay, it should contain transparency to see the video underneath.
 
 ## Can I Edit the Project While it is Running
 
-*In Theory*, yes. You should be able to add files while the stream is running, and have them added to be streamed at a later point. However, be cautious of deleting files, as they may be streaming at the time of deletion and cause a crash. 
+_In Theory_, yes. You should be able to add files while the stream is running, and have them added to be streamed at a later point. However, be cautious of deleting files, as they may be streaming at the time of deletion and cause a crash.
 
 Also, be cautious editing the `config.json`, as having a bad config will exit the process.
-

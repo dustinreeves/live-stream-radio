@@ -7,7 +7,7 @@ const { runFfmpeg } = require('./ffmpegProcess');
 const DEFAULT_MAX_GIF_SIZE = 720;
 
 // Converted gifs are kept here and reused, rather than converting the same gif for every track
-const cacheDirectory = nodePath.join(os.tmpdir(), 'live-stream-radio-gifs');
+const cacheDirectory = nodePath.join(os.tmpdir(), 'podcast-radio-gifs');
 
 // Async function to optimize a gif using ffmpeg, returns the path of the optimized gif
 // http://blog.pkh.me/p/21-high-quality-gif-with-ffmpeg.html

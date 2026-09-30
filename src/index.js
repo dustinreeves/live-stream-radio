@@ -18,7 +18,7 @@ if ((Object.keys(argv).length === 1 && argv._.length <= 0) || argv.help !== unde
   const pkg = require('../package.json');
 
   console.log(`
-${colors.blue('USAGE:')} ${colors.yellow(pkg.name)}
+${colors.blue('USAGE:')} ${colors.yellow(pkg.name)} (live-stream-radio also works)
   
   ${colors.blue('--help, -h')} : Print this usage message.
   ${colors.blue('--version, -v')} : Print the current version of this installation.
@@ -185,6 +185,6 @@ const startRadioTask = async () => {
   await stream.start(path, getConfig, argv.output);
 };
 startRadioTask().catch(e => {
-  console.log(`${colors.red('Could not start live-stream-radio:')} ${e.message} 😞`);
+  console.log(`${colors.red('Could not start podcast-radio:')} ${e.message} 😞`);
   process.exit(1);
 });
