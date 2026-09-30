@@ -423,3 +423,72 @@ Queues a track. Only files listed by `GET /library/audio` can be queued. Queued 
 ### Description
 
 Empties the queue.
+
+## GET /podcasts
+
+### Description
+
+The podcast feeds episodes are downloaded from, and how the downloading is going. `download` is set while an episode downloads, `nextCheck` while waiting for the next check.
+
+### Example Successful Response:
+
+```
+{
+    "checking": false,
+    "lastCheck": "2026-09-30T16:00:00.000Z",
+    "nextCheck": "2026-09-30T17:00:00.000Z",
+    "checkEveryMinutes": 60,
+    "feeds": [
+        {
+            "url": "https://example.com/feed.xml",
+            "title": "My Show",
+            "directory": "./audio/My Show",
+            "keepLatest": 10,
+            "lastChecked": "2026-09-30T16:00:00.000Z",
+            "episodes": 10,
+            "latest": "Episode 120: ..."
+        }
+    ]
+}
+```
+
+## POST /podcasts/check
+
+### Description
+
+Checks the feeds now instead of waiting for the next check. Returns straight away, with the same response as `GET /podcasts`.
+
+## POST /podcasts/feeds
+
+### Description
+
+Adds a feed to `config.json`, after reading it to check it works. Its episodes go into a folder named after the show, inside `radio.audio_directory`, and downloading starts straight away. Not available when the project uses `config.js`.
+
+### Body Params
+
+- `url` - The feed's url, starting with `http://` or `https://`.
+- `keep_latest` - Optional. How many of the newest episodes to keep (default 10). 0 keeps every episode.
+
+### Example Response:
+
+**HTTP 200** - Added
+
+```
+{
+    "feed": { "title": "My Show", "episodesInFeed": 120, "url": "https://example.com/feed.xml", "keep_latest": 10, "directory": "./audio/My Show" }
+}
+```
+
+**HTTP 400** - Not a url, already added, not a readable RSS feed, or no audio episodes
+
+## POST /podcasts/feeds/remove
+
+### Description
+
+Removes a feed from `config.json`. Episodes already downloaded stay; delete the show's folder to remove them.
+
+### Body Params
+
+- `url` - The feed's url.
+
+**HTTP 404** - That feed isn't in the config

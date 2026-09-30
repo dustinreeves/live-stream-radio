@@ -44,6 +44,7 @@ A browser page, served by `podcast-radio` itself, for running the station withou
 - **History** – the last 50 tracks and interludes.
 - **Live log** – the same output you'd see in the terminal or syslog.
 - **Stream settings** – edit the on-screen text (title, artist / album / song lines: wording, size, colours, position, scrolling), the overlay image, interludes, media folders, stream URL and key, and video / audio quality, all in a form. An _Advanced (JSON)_ tab edits the raw `config.json`.
+- **Podcast feeds** – add a podcast by its RSS feed url. New episodes download automatically and join the rotation, keeping the newest 10 (or however many you choose).
 - **Library and queue** – search the audio files the station can play, and pick what plays: _Queue_ adds a track to _Up next_, _Play now_ switches to it straight away. Queued tracks play in order (skipping interludes), then the station goes back to random. The queue is kept in memory, so a restart clears it.
 
 Nothing extra to install: no build step and no new dependencies.
@@ -123,6 +124,7 @@ _All AI-written, see the warning at the top._
 - **Every generated project gets its own api key**, instead of the shared `super-secret-api-key`, which is refused when the api can be reached from other computers.
 - **Absolute project folders work**, e.g. `podcast-radio /srv/radio`.
 - **Renamed to `podcast-radio`.** The command, package and repository are now `podcast-radio`. `live-stream-radio` still works as a second name for the command, so existing services don't need changing.
+- **Podcast feeds.** Paste a podcast's RSS feed into the console and new episodes download on their own (checked hourly) into a folder for the show, where they join the rotation. The newest 10 are kept by default; older downloads are removed, never your own files or the episode playing. See `podcasts` in the [config docs](./src/generate/config.mdx).
 - **No repeats.** Episodes are shuffled so every one plays once before any repeats (`play_order`), or can play in order by file name, and a restart carries on the same round. Before, each track was picked at random, so the same one could play twice in a row.
 - **More audio formats** (`.m4a`, `.aac`, `.ogg`, `.opus`), extensions in any case, and folders are scanned once a minute rather than for every track.
 - **Gifs are converted once** and reused, and temp files are cleaned up.

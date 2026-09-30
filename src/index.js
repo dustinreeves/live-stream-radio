@@ -181,6 +181,12 @@ const startRadioTask = async () => {
   // Set our number of history items
   historyService.setNumberOfHistoryItems(config.api.number_of_history_items);
 
+  // Download new episodes from the podcast feeds in the config. The episode playing is never removed
+  require('./podcasts/podcasts.service').start(path, getConfig, () => {
+    const history = historyService.getHistory();
+    return stream.isRunning() && history.length > 0 ? history[history.length - 1].audio.path : undefined;
+  });
+
   // Start our stream
   await stream.start(path, getConfig, argv.output);
 };

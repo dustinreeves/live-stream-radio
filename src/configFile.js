@@ -65,6 +65,22 @@ const findConfigProblem = config => {
     }
   }
 
+  if (config.podcasts !== undefined) {
+    if (!isObject(config.podcasts) || (config.podcasts.feeds !== undefined && !Array.isArray(config.podcasts.feeds))) {
+      return 'podcasts must be an object, with feeds as a list';
+    }
+    const feeds = config.podcasts.feeds || [];
+    for (let i = 0; i < feeds.length; i++) {
+      const feed = typeof feeds[i] === 'string' ? { url: feeds[i] } : feeds[i];
+      if (!isObject(feed) || typeof feed.url !== 'string' || !/^https?:\/\//i.test(feed.url)) {
+        return `podcasts.feeds[${i}] needs a url starting with http:// or https://`;
+      }
+      if (feed.keep_latest !== undefined && !(parseInt(feed.keep_latest, 10) >= 0)) {
+        return `podcasts.feeds[${i}].keep_latest must be 0 (keep every episode) or more`;
+      }
+    }
+  }
+
   return undefined;
 };
 

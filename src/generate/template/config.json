@@ -100,5 +100,9 @@
         "position_y": 0
       }
     }
+  },
+  "podcasts": {
+    "check_every_minutes": 60,
+    "feeds": []
   }
 }
