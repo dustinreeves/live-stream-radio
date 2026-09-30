@@ -1,0 +1,1200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Radio Console</title>
+    <style>
+      :root {
+        --bg: #f6f6f4;
+        --panel: #ffffff;
+        --text: #1c1c1a;
+        --muted: #6b6b66;
+        --border: #e2e2dc;
+        --accent: #d9480f;
+        --ok: #2b8a3e;
+        --bad: #c92a2a;
+        --log-bg: #1c1c1a;
+        --log-text: #e9e9e4;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #141413;
+          --panel: #1e1e1c;
+          --text: #ececE8;
+          --muted: #9a9a93;
+          --border: #33332f;
+          --accent: #ff8a4c;
+          --ok: #51cf66;
+          --bad: #ff6b6b;
+          --log-bg: #0d0d0c;
+          --log-text: #d9d9d3;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0;
+        flex: 1;
+      }
+      h2 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        margin: 0 0 10px;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .grid > .panel {
+        margin-bottom: 0;
+        min-width: 0;
+      }
+      @media (max-width: 760px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      button {
+        font: inherit;
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--text);
+        cursor: pointer;
+      }
+      button:hover:not(:disabled) {
+        border-color: var(--accent);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      button.danger:hover:not(:disabled) {
+        border-color: var(--bad);
+        color: var(--bad);
+      }
+      input,
+      select,
+      textarea {
+        font: inherit;
+        color: var(--text);
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+        width: 100%;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        font-size: 13px;
+      }
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+      .pill.live .dot {
+        background: var(--ok);
+      }
+      .pill.down .dot {
+        background: var(--bad);
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .now-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+      .now-sub {
+        color: var(--muted);
+        margin: 2px 0 12px;
+        overflow-wrap: anywhere;
+      }
+      .bar {
+        height: 6px;
+        background: var(--border);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .bar > div {
+        height: 100%;
+        width: 0;
+        background: var(--accent);
+        transition: width 0.5s linear;
+      }
+      .meta {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      .list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        max-height: 320px;
+        overflow: auto;
+      }
+      .list li {
+        padding: 6px 0;
+        border-bottom: 1px solid var(--border);
+        overflow-wrap: anywhere;
+      }
+      .list li:last-child {
+        border-bottom: 0;
+      }
+      .list .when {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .tag {
+        font-size: 11px;
+        padding: 1px 6px;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        margin-left: 6px;
+      }
+      #log {
+        background: var(--log-bg);
+        color: var(--log-text);
+        font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace;
+        padding: 10px;
+        border-radius: 8px;
+        height: 320px;
+        overflow: auto;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        margin: 0;
+      }
+      #config {
+        font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace;
+        height: 420px;
+        resize: vertical;
+        white-space: pre;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .note {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .note.bad {
+        color: var(--bad);
+      }
+      .note.ok {
+        color: var(--ok);
+      }
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 14px;
+      }
+      .tabs button {
+        border: 0;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        background: none;
+        padding: 8px 10px;
+        color: var(--muted);
+      }
+      .tabs button[aria-selected='true'] {
+        color: var(--text);
+        border-bottom-color: var(--accent);
+      }
+      .group {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+      .group h3 {
+        font-size: 15px;
+        margin: 0 0 2px;
+      }
+      .group > .note {
+        margin: 0 0 8px;
+      }
+      .fields {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px 12px;
+        margin-top: 8px;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 13px;
+        color: var(--muted);
+        min-width: 0;
+      }
+      .field.wide {
+        grid-column: 1 / -1;
+      }
+      .field.check {
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        color: var(--text);
+      }
+      .field.check input {
+        width: auto;
+      }
+      .field small {
+        font-size: 12px;
+      }
+      .colorpair {
+        display: flex;
+        gap: 6px;
+      }
+      .colorpair input[type='color'] {
+        width: 40px;
+        min-width: 40px;
+        padding: 2px;
+        height: 38px;
+      }
+      .restart {
+        font-size: 11px;
+        padding: 0 5px;
+        border-radius: 4px;
+        border: 1px solid var(--accent);
+        color: var(--accent);
+      }
+      .savebar {
+        position: sticky;
+        bottom: 0;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 0 2px;
+        background: var(--panel);
+        border-top: 1px solid var(--border);
+      }
+      #login {
+        max-width: 380px;
+        margin: 12vh auto 0;
+      }
+      #login label {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      #login label input {
+        width: auto;
+      }
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <form id="login" class="panel hidden">
+        <h1 style="margin-bottom: 12px">Radio Console</h1>
+        <div id="login-user">
+          <input id="username" type="text" placeholder="Username" autocomplete="username" autocapitalize="off" />
+          <input id="password" type="password" placeholder="Password" autocomplete="current-password" style="margin-top: 8px" />
+        </div>
+        <div id="login-key" class="hidden">
+          <input id="key" type="password" placeholder="API key from config.json" autocomplete="off" />
+        </div>
+        <div class="row">
+          <label><input id="remember" type="checkbox" /> Remember on this device</label>
+        </div>
+        <div class="row">
+          <button class="primary" type="submit">Sign in</button>
+          <a id="toggle-mode" href="#" class="note">Use API key instead</a>
+        </div>
+        <p id="login-msg" class="note bad" style="margin-bottom: 0"></p>
+      </form>
+
+      <div id="app" class="hidden">
+        <header>
+          <h1>Radio Console</h1>
+          <span id="status" class="pill"><span class="dot"></span><span id="status-text">Connecting…</span></span>
+          <span id="whoami" class="note"></span>
+          <button id="signout" type="button">Sign out</button>
+        </header>
+
+        <section class="panel">
+          <h2>Now playing</h2>
+          <p id="now-title" class="now-title">—</p>
+          <p id="now-sub" class="now-sub"></p>
+          <div class="bar"><div id="now-bar"></div></div>
+          <div class="meta"><span id="now-time"></span><span id="now-enc"></span></div>
+          <div class="row">
+            <div class="controls">
+              <button id="btn-start" type="button">Start</button>
+              <button id="btn-skip" type="button">Skip track</button>
+              <button id="btn-stop" type="button" class="danger">Stop</button>
+            </div>
+            <span id="control-msg" class="note"></span>
+          </div>
+        </section>
+
+        <div class="grid">
+          <section class="panel">
+            <h2>Recently played</h2>
+            <ul id="history" class="list"></ul>
+          </section>
+          <section class="panel">
+            <h2>Log</h2>
+            <pre id="log"></pre>
+            <div class="row">
+              <label class="note"><input id="follow" type="checkbox" checked style="width: auto" /> Follow</label>
+            </div>
+          </section>
+        </div>
+
+        <section class="panel" style="margin-top: 16px">
+          <h2>Stream settings</h2>
+          <p class="note" style="margin-top: 0">
+            Changes take effect from the next track, or right away with <b>Save &amp; apply now</b> (which skips the current track). Settings
+            marked <span class="restart">restart</span> need the service restarted. The previous config is kept as config.json.bak.
+          </p>
+          <div id="tabs" class="tabs" role="tablist"></div>
+          <form id="settings" autocomplete="off" onsubmit="return false"></form>
+          <div id="raw-pane" class="hidden">
+            <p class="note" style="margin-top: 0">The whole config.json, for anything the form doesn't cover.</p>
+            <textarea id="config" spellcheck="false"></textarea>
+          </div>
+          <div class="savebar">
+            <button id="btn-save" class="primary" type="button">Save</button>
+            <button id="btn-apply" type="button">Save &amp; apply now</button>
+            <button id="btn-discard" type="button">Discard changes</button>
+            <span id="config-msg" class="note"></span>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Library <span id="lib-count" class="note"></span></h2>
+          <input id="lib-filter" type="search" placeholder="Filter by file name" />
+          <ul id="library" class="list" style="margin-top: 10px"></ul>
+          <div class="row">
+            <button id="btn-lib" type="button">Load library</button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      (function() {
+        var KEY_NAME = 'lsr-console-auth';
+        // { header: 'Session <token>' or the api key, user: username or null }
+        var auth = null;
+        var keyMode = false;
+        var lastLogId = 0;
+        var libraryFiles = [];
+        var busy = false;
+
+        var $ = function(id) {
+          return document.getElementById(id);
+        };
+
+        // Storage can be blocked (private mode etc), never let that break the page
+        var store = {
+          get: function() {
+            try {
+              var saved = JSON.parse(sessionStorage.getItem(KEY_NAME) || localStorage.getItem(KEY_NAME));
+              return saved && saved.header ? saved : null;
+            } catch (e) {
+              return null;
+            }
+          },
+          set: function(value, remember) {
+            try {
+              sessionStorage.setItem(KEY_NAME, JSON.stringify(value));
+              if (remember) localStorage.setItem(KEY_NAME, JSON.stringify(value));
+            } catch (e) {}
+          },
+          clear: function() {
+            try {
+              sessionStorage.removeItem(KEY_NAME);
+              localStorage.removeItem(KEY_NAME);
+            } catch (e) {}
+          }
+        };
+
+        function api(method, path, body) {
+          var opts = { method: method, headers: {} };
+          if (auth) opts.headers.Authorization = auth.header;
+          if (body !== undefined) {
+            opts.headers['Content-Type'] = 'application/json';
+            opts.body = JSON.stringify(body);
+          }
+          return fetch(path, opts).then(function(res) {
+            if (res.status === 401 && path !== '/console/login') {
+              signOut(auth && auth.user ? 'Your session has ended, please sign in again.' : 'That API key was not accepted.');
+              throw new Error('unauthorized');
+            }
+            return res.json().then(function(data) {
+              if (!res.ok) throw new Error(data.message || 'HTTP ' + res.status);
+              return data;
+            });
+          });
+        }
+
+        function fmtTime(seconds) {
+          if (seconds === undefined || seconds === null || isNaN(seconds)) return '--:--';
+          seconds = Math.max(0, Math.floor(seconds));
+          var h = Math.floor(seconds / 3600);
+          var m = Math.floor((seconds % 3600) / 60);
+          var s = seconds % 60;
+          var mm = (h > 0 && m < 10 ? '0' : '') + m;
+          return (h > 0 ? h + ':' : '') + mm + ':' + (s < 10 ? '0' : '') + s;
+        }
+
+        function fileName(path) {
+          return String(path || '')
+            .split(/[\\/]/)
+            .pop();
+        }
+
+        function describe(item) {
+          var md = (item.audio && item.audio.metadata) || {};
+          var title = md.title || fileName(item.audio && item.audio.path);
+          var parts = [md.artist, md.album].filter(Boolean);
+          return { title: title, sub: parts.join(' — ') };
+        }
+
+        // ---- Status / now playing ----
+        function refreshStatus() {
+          return api('GET', '/stream/status').then(function(data) {
+            var pill = $('status');
+            pill.className = 'pill ' + (data.isRunning ? 'live' : 'down');
+            $('status-text').textContent = data.isRunning ? 'Live · up ' + fmtTime(data.uptime) : 'Stopped';
+
+            $('btn-start').disabled = busy || data.isRunning;
+            $('btn-stop').disabled = busy || !data.isRunning;
+            $('btn-skip').disabled = busy || !data.isRunning;
+
+            var now = data.nowPlaying;
+            if (!now) {
+              $('now-title').textContent = data.isRunning ? 'Starting…' : 'Nothing playing';
+              $('now-sub').textContent = '';
+              $('now-bar').style.width = '0';
+              $('now-time').textContent = '';
+              $('now-enc').textContent = '';
+              return;
+            }
+
+            var d = describe(now);
+            $('now-title').textContent = d.title;
+            $('now-sub').textContent = (d.sub ? d.sub + ' · ' : '') + (now.type === 'interlude' ? 'interlude' : fileName(now.video && now.video.path));
+
+            var duration = now.audio && now.audio.duration;
+            // ffmpeg time includes the 3 second lead-in silence
+            var elapsed = data.progress ? Math.max(0, data.progress.seconds - 3) : 0;
+            $('now-time').textContent = fmtTime(elapsed) + ' / ' + fmtTime(duration);
+            $('now-bar').style.width = duration ? Math.min(100, (elapsed / duration) * 100) + '%' : '0';
+            $('now-enc').textContent = data.progress
+              ? Math.round(data.progress.fps || 0) + ' fps · ' + Math.round(data.progress.kbps || 0) + ' kbps'
+              : '';
+          });
+        }
+
+        function refreshHistory() {
+          return api('GET', '/stream/history').then(function(data) {
+            var list = $('history');
+            list.textContent = '';
+            data.history
+              .slice()
+              .reverse()
+              .slice(0, 50)
+              .forEach(function(item) {
+                var d = describe(item);
+                var li = document.createElement('li');
+                var title = document.createElement('div');
+                title.textContent = d.title;
+                if (item.type === 'interlude') {
+                  var tag = document.createElement('span');
+                  tag.className = 'tag';
+                  tag.textContent = 'interlude';
+                  title.appendChild(tag);
+                }
+                var when = document.createElement('div');
+                when.className = 'when';
+                when.textContent = new Date(item.date).toLocaleString() + (d.sub ? ' · ' + d.sub : '');
+                li.appendChild(title);
+                li.appendChild(when);
+                list.appendChild(li);
+              });
+            if (!data.history.length) {
+              var li = document.createElement('li');
+              li.className = 'note';
+              li.textContent = 'Nothing yet.';
+              list.appendChild(li);
+            }
+          });
+        }
+
+        function refreshLog() {
+          return api('GET', '/stream/log?since=' + lastLogId).then(function(data) {
+            if (!data.log.length) return;
+            var pre = $('log');
+            var text = data.log
+              .map(function(line) {
+                return new Date(line.date).toLocaleTimeString() + '  ' + line.text;
+              })
+              .join('\n');
+            pre.textContent += (pre.textContent ? '\n' : '') + text;
+            // Keep the page light
+            if (pre.textContent.length > 200000) pre.textContent = pre.textContent.slice(-150000);
+            lastLogId = data.log[data.log.length - 1].id;
+            if ($('follow').checked) pre.scrollTop = pre.scrollHeight;
+          });
+        }
+
+        // ---- Controls ----
+        function control(action, label) {
+          busy = true;
+          $('control-msg').className = 'note';
+          $('control-msg').textContent = label + '…';
+          ['btn-start', 'btn-stop', 'btn-skip'].forEach(function(id) {
+            $(id).disabled = true;
+          });
+          api('POST', '/stream/' + action, {})
+            .then(function() {
+              $('control-msg').textContent = label + ' sent.';
+            })
+            .catch(function(e) {
+              $('control-msg').className = 'note bad';
+              $('control-msg').textContent = label + ' failed: ' + e.message;
+            })
+            .then(function() {
+              busy = false;
+              setTimeout(tick, 1500);
+            });
+        }
+
+        $('btn-start').onclick = function() {
+          control('start', 'Start');
+        };
+        $('btn-skip').onclick = function() {
+          control('restart', 'Skip');
+        };
+        $('btn-stop').onclick = function() {
+          if (confirm('Stop the stream? Viewers will see it go offline.')) control('stop', 'Stop');
+        };
+
+        // ---- Stream settings ----
+        // Field types: text, password, number, bool, select, color. A "text" group is a Common Text Object.
+        var IMAGE_FIELDS = function(base) {
+          return [
+            { p: base + '.enabled', t: 'bool', l: 'Show the image' },
+            { p: base + '.image_path', t: 'text', l: 'Image file', wide: true, h: 'Relative to the project folder, e.g. ./overlay.png' },
+            { p: base + '.position_x', t: 'number', l: 'X (pixels from left)' },
+            { p: base + '.position_y', t: 'number', l: 'Y (pixels from top)' }
+          ];
+        };
+        var PRESETS = ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow', 'slower', 'veryslow'];
+        var RESTART_NOTE = 'Restart the service after changing these (e.g. sudo systemctl restart cowardradio.service).';
+
+        var TABS = [
+          {
+            title: 'On-screen text',
+            groups: [
+              {
+                title: 'Overlay',
+                fields: [
+                  { p: 'radio.overlay.enabled', t: 'bool', l: 'Show the overlay (text and image) on the stream' },
+                  { p: 'radio.overlay.font_path', t: 'text', l: 'Font file', wide: true, h: 'Relative to the project folder, e.g. ./fonts/Lato-Regular.ttf' }
+                ]
+              },
+              { text: 'radio.overlay.title', title: 'Title', textKey: 'text', scroll: true, h: 'Fixed text, like your station name.' },
+              { text: 'radio.overlay.artist', title: 'Artist line', textKey: 'label', h: 'Shown before the artist tag. Hidden when a file has no artist.' },
+              { text: 'radio.overlay.album', title: 'Album line', textKey: 'label', h: 'Shown before the album tag. Hidden when a file has no album.' },
+              { text: 'radio.overlay.song', title: 'Song line', textKey: 'label', h: "Shown before the song title. Uses the file name when a file has no title tag." },
+              { title: 'Overlay image', fields: IMAGE_FIELDS('radio.overlay.image') }
+            ]
+          },
+          {
+            title: 'Interludes',
+            groups: [
+              {
+                title: 'Interludes',
+                h: 'Short clips (station idents, ads, jingles) played between tracks, from their own folders.',
+                fields: [
+                  { p: 'interlude.enabled', t: 'bool', l: 'Play interludes' },
+                  { p: 'interlude.frequency', t: 'number', l: 'How often (0 to 1)', step: '0.05', min: 0, max: 1, h: '0.2 = about 1 in 5 tracks' },
+                  { p: 'interlude.audio_directory', t: 'text', l: 'Interlude audio folder', wide: true },
+                  { p: 'interlude.video_directory', t: 'text', l: 'Interlude video folder', wide: true }
+                ]
+              },
+              {
+                title: 'Interlude overlay',
+                fields: [
+                  { p: 'interlude.overlay.enabled', t: 'bool', l: 'Show the overlay during interludes' },
+                  { p: 'interlude.overlay.font_path', t: 'text', l: 'Font file', wide: true }
+                ]
+              },
+              { text: 'interlude.overlay.title', title: 'Interlude title', textKey: 'text', scroll: true },
+              { title: 'Interlude image', fields: IMAGE_FIELDS('interlude.overlay.image') }
+            ]
+          },
+          {
+            title: 'Media & output',
+            groups: [
+              {
+                title: 'Media folders',
+                h: 'Relative to the project folder. Subfolders are included.',
+                fields: [
+                  { p: 'radio.audio_directory', t: 'text', l: 'Audio folder', wide: true },
+                  { p: 'radio.video_directory', t: 'text', l: 'Video / gif folder', wide: true }
+                ]
+              },
+              {
+                title: 'Stream destination',
+                h: 'Where the stream is sent. Applies from the next track.',
+                fields: [
+                  { p: 'stream_url', t: 'text', l: 'Stream URL', wide: true, h: '$stream_key is replaced with the key below' },
+                  { p: 'stream_key', t: 'password', l: 'Stream key', wide: true }
+                ]
+              }
+            ]
+          },
+          {
+            title: 'Quality',
+            groups: [
+              {
+                title: 'Video',
+                h: 'Common sizes: 854x480, 1280x720, 1920x1080.',
+                fields: [
+                  { p: 'video_width', t: 'number', l: 'Width' },
+                  { p: 'video_height', t: 'number', l: 'Height' },
+                  { p: 'video_fps', t: 'number', l: 'Frames per second' },
+                  { p: 'video_bit_rate', t: 'text', l: 'Video bitrate', h: 'e.g. 2500k' },
+                  { p: 'bufsize', t: 'text', l: 'Buffer size', h: 'e.g. 2500k' },
+                  { p: 'crf', t: 'number', l: 'CRF', h: 'Lower is better quality' },
+                  { p: 'preset', t: 'select', l: 'Encoder preset', o: PRESETS, h: 'Faster uses less CPU' },
+                  { p: 'threads', t: 'number', l: 'Threads' },
+                  { p: 'video_codec', t: 'text', l: 'Video codec' },
+                  { p: 'max_gif_size', t: 'number', l: 'Max gif size (px)' }
+                ]
+              },
+              {
+                title: 'Audio',
+                fields: [
+                  { p: 'audio_codec', t: 'text', l: 'Audio codec' },
+                  { p: 'audio_bit_rate', t: 'text', l: 'Audio bitrate', h: 'e.g. 128k' },
+                  { p: 'audio_sample_rate', t: 'select', l: 'Sample rate', o: ['44100', '48000'] },
+                  { p: 'normalize_audio', t: 'bool', l: 'Even out loudness between tracks' }
+                ]
+              },
+              {
+                title: 'ffmpeg',
+                fields: [{ p: 'ffmpeg_path', t: 'text', l: 'ffmpeg program', wide: true, h: 'Leave empty to use the ffmpeg on the PATH' }]
+              }
+            ]
+          },
+          {
+            title: 'API & console',
+            groups: [
+              {
+                title: 'API',
+                restart: true,
+                h: RESTART_NOTE,
+                fields: [
+                  { p: 'api.host', t: 'text', l: 'Listen address', h: 'localhost = only this machine' },
+                  { p: 'api.port', t: 'number', l: 'Port' },
+                  { p: 'api.key', t: 'password', l: 'API key', wide: true, h: 'Leave set: with no key and no console users the API is open to anyone' },
+                  { p: 'api.number_of_history_items', t: 'number', l: 'History length' }
+                ]
+              },
+              {
+                title: 'Console',
+                h: 'Add users or change passwords on the server with: live-stream-radio --set-password <project folder>',
+                fields: [{ p: 'console.session_hours', t: 'number', l: 'Stay signed in (hours)', ph: '12' }]
+              }
+            ]
+          },
+          { title: 'Advanced (JSON)', raw: true }
+        ];
+
+        var currentConfig = null;
+        var activeTab = 0;
+        var dirty = false;
+
+        function getPath(obj, path) {
+          return path.split('.').reduce(function(o, k) {
+            return o && typeof o === 'object' ? o[k] : undefined;
+          }, obj);
+        }
+
+        function setPath(obj, path, value) {
+          var keys = path.split('.');
+          var o = obj;
+          keys.slice(0, -1).forEach(function(k) {
+            if (!o[k] || typeof o[k] !== 'object') o[k] = {};
+            o = o[k];
+          });
+          o[keys[keys.length - 1]] = value;
+        }
+
+        function isOn(value) {
+          if (typeof value === 'string') return ['true', '1', 'yes', 'on'].indexOf(value.trim().toLowerCase()) !== -1;
+          return Boolean(value);
+        }
+
+        function el(tag, props, children) {
+          var node = document.createElement(tag);
+          Object.keys(props || {}).forEach(function(k) {
+            if (k === 'text') node.textContent = props[k];
+            else if (k === 'className') node.className = props[k];
+            else node.setAttribute(k, props[k]);
+          });
+          (children || []).forEach(function(c) {
+            if (c) node.appendChild(c);
+          });
+          return node;
+        }
+
+        function renderField(f) {
+          var input;
+          if (f.t === 'bool') {
+            input = el('input', { type: 'checkbox', 'data-path': f.p, 'data-type': 'bool' });
+            return el('label', { className: 'field check' + (f.wide ? ' wide' : '') }, [input, el('span', { text: f.l })]);
+          }
+          if (f.t === 'select') {
+            input = el('select', { 'data-path': f.p, 'data-type': 'select' });
+            f.o.forEach(function(opt) {
+              input.appendChild(el('option', { value: opt, text: opt }));
+            });
+          } else if (f.t === 'color') {
+            var text = el('input', { type: 'text', 'data-path': f.p, 'data-type': 'text', placeholder: '#FFFFFF' });
+            var picker = el('input', { type: 'color', 'aria-label': f.l + ' picker' });
+            text.addEventListener('input', function() {
+              if (/^#[0-9a-f]{6}$/i.test(text.value)) picker.value = text.value.toLowerCase();
+            });
+            picker.addEventListener('input', function() {
+              text.value = picker.value.toUpperCase();
+              markDirty();
+            });
+            input = el('span', { className: 'colorpair' }, [picker, text]);
+          } else {
+            var attrs = { type: f.t === 'password' ? 'password' : f.t === 'number' ? 'number' : 'text', 'data-path': f.p, 'data-type': f.t };
+            if (f.step) attrs.step = f.step;
+            else if (f.t === 'number') attrs.step = 'any';
+            if (f.min !== undefined) attrs.min = f.min;
+            if (f.max !== undefined) attrs.max = f.max;
+            if (f.ph) attrs.placeholder = f.ph;
+            if (f.t === 'password') attrs.autocomplete = 'new-password';
+            input = el('input', attrs);
+          }
+          return el('label', { className: 'field' + (f.wide ? ' wide' : '') }, [el('span', { text: f.l }), input, f.h ? el('small', { text: f.h }) : null]);
+        }
+
+        // A Common Text Object: enabled, text or label, font_size, font_color, font_border, position_x/y, (scroll)
+        function textGroupFields(g) {
+          var b = g.text;
+          var fields = [
+            { p: b + '.enabled', t: 'bool', l: 'Show', wide: true },
+            { p: b + '.' + g.textKey, t: 'text', l: g.textKey === 'text' ? 'Text' : 'Label', wide: true },
+            { p: b + '.font_size', t: 'number', l: 'Size', h: 'About 10 fits a line' },
+            { p: b + '.font_color', t: 'color', l: 'Colour' },
+            { p: b + '.font_border', t: 'color', l: 'Outline colour' },
+            { p: b + '.position_x', t: 'number', l: 'X (% from left)', min: 0, max: 100 },
+            { p: b + '.position_y', t: 'number', l: 'Y (% from top)', min: 0, max: 100 }
+          ];
+          if (g.scroll) {
+            fields.push({ p: b + '.enable_scroll', t: 'bool', l: 'Scroll across the screen (ignores X)' });
+            fields.push({ p: b + '.font_scroll_speed', t: 'number', l: 'Seconds per scroll', h: 'Higher is slower' });
+          }
+          return fields;
+        }
+
+        function renderSettings() {
+          var tabs = $('tabs');
+          var form = $('settings');
+          tabs.textContent = '';
+          form.textContent = '';
+
+          TABS.forEach(function(tab, i) {
+            var button = el('button', { type: 'button', role: 'tab', 'aria-selected': String(i === activeTab), text: tab.title });
+            button.onclick = function() {
+              switchTab(i);
+            };
+            tabs.appendChild(button);
+            if (tab.raw) return;
+
+            var pane = el('div', { 'data-tab': i, className: i === activeTab ? '' : 'hidden' });
+            tab.groups.forEach(function(g) {
+              var fields = g.text ? textGroupFields(g) : g.fields;
+              var heading = el('h3', { text: g.title + ' ' });
+              if (g.restart) heading.appendChild(el('span', { className: 'restart', text: 'restart' }));
+              pane.appendChild(
+                el('div', { className: 'group' }, [heading, g.h ? el('p', { className: 'note', text: g.h }) : null, el('div', { className: 'fields' }, fields.map(renderField))])
+              );
+            });
+            form.appendChild(pane);
+          });
+          $('raw-pane').classList.toggle('hidden', !TABS[activeTab].raw);
+        }
+
+        // Put config values into the form
+        function fillForm(config) {
+          $('settings')
+            .querySelectorAll('[data-path]')
+            .forEach(function(input) {
+              var value = getPath(config, input.getAttribute('data-path'));
+              if (input.getAttribute('data-type') === 'bool') {
+                input.checked = isOn(value);
+              } else {
+                input.value = value === undefined || value === null ? '' : String(value);
+                if (input.tagName === 'SELECT' && value !== undefined && input.value !== String(value)) {
+                  // Keep values the list doesn't know about
+                  input.appendChild(el('option', { value: String(value), text: String(value) }));
+                  input.value = String(value);
+                }
+                var picker = input.parentNode.querySelector('input[type=color]');
+                if (picker) picker.value = /^#[0-9a-f]{6}$/i.test(input.value) ? input.value.toLowerCase() : '#000000';
+              }
+            });
+        }
+
+        // Apply the form onto a copy of the config, keeping each value's existing type (string or number)
+        function configFromForm() {
+          var config = JSON.parse(JSON.stringify(currentConfig));
+          $('settings')
+            .querySelectorAll('[data-path]')
+            .forEach(function(input) {
+              var path = input.getAttribute('data-path');
+              var type = input.getAttribute('data-type');
+              var old = getPath(config, path);
+              if (type === 'bool') {
+                if (old === undefined && !input.checked) return;
+                setPath(config, path, input.checked);
+              } else if (type === 'number') {
+                if (input.value === '') {
+                  if (old !== undefined) setPath(config, path, typeof old === 'string' ? '' : old);
+                  return;
+                }
+                setPath(config, path, typeof old === 'string' ? input.value : Number(input.value));
+              } else {
+                if (old === undefined && input.value === '') return;
+                setPath(config, path, input.value);
+              }
+            });
+          return config;
+        }
+
+        function switchTab(i) {
+          if (i === activeTab) return;
+          var wasRaw = TABS[activeTab].raw;
+          if (wasRaw) {
+            // Carry raw edits back into the form
+            try {
+              currentConfig = JSON.parse($('config').value);
+            } catch (e) {
+              showConfigError(new Error('Fix the JSON before leaving this tab: ' + e.message));
+              return;
+            }
+            fillForm(currentConfig);
+          } else if (TABS[i].raw) {
+            currentConfig = configFromForm();
+            $('config').value = JSON.stringify(currentConfig, null, 2);
+          }
+          activeTab = i;
+          $('tabs')
+            .querySelectorAll('button')
+            .forEach(function(b, n) {
+              b.setAttribute('aria-selected', String(n === i));
+            });
+          $('settings')
+            .querySelectorAll('[data-tab]')
+            .forEach(function(pane) {
+              pane.classList.toggle('hidden', Number(pane.getAttribute('data-tab')) !== i);
+            });
+          $('raw-pane').classList.toggle('hidden', !TABS[i].raw);
+        }
+
+        function markDirty() {
+          if (!currentConfig) return;
+          dirty = true;
+          $('config-msg').className = 'note';
+          $('config-msg').textContent = 'Unsaved changes';
+        }
+        $('settings').addEventListener('input', markDirty);
+        $('settings').addEventListener('change', markDirty);
+        $('config').addEventListener('input', markDirty);
+        window.addEventListener('beforeunload', function(e) {
+          if (dirty && auth) {
+            e.preventDefault();
+            e.returnValue = '';
+          }
+        });
+
+        function showConfig(config) {
+          currentConfig = config;
+          fillForm(config);
+          $('config').value = JSON.stringify(config, null, 2);
+          dirty = false;
+        }
+
+        function loadConfig() {
+          $('config-msg').className = 'note';
+          $('config-msg').textContent = 'Loading…';
+          return api('GET', '/config').then(function(data) {
+            showConfig(data.value);
+            $('config-msg').textContent = '';
+          });
+        }
+
+        function saveConfig(applyNow) {
+          var config;
+          if (!currentConfig) {
+            showConfigError(new Error('The config has not loaded yet, try Discard changes to reload it.'));
+            return;
+          }
+          if (TABS[activeTab].raw) {
+            try {
+              config = JSON.parse($('config').value);
+            } catch (e) {
+              showConfigError(new Error('Not valid JSON: ' + e.message));
+              return;
+            }
+          } else {
+            config = configFromForm();
+          }
+          $('config-msg').className = 'note';
+          $('config-msg').textContent = 'Saving…';
+          api('PUT', '/config', { config: config })
+            .then(function() {
+              showConfig(config);
+              $('config-msg').className = 'note ok';
+              if (applyNow && !$('btn-skip').disabled) {
+                $('config-msg').textContent = 'Saved. Skipping to the next track to apply…';
+                return api('POST', '/stream/restart', {}).then(function() {
+                  $('config-msg').textContent = 'Saved and applied, the next track is starting.';
+                  setTimeout(tick, 1500);
+                });
+              }
+              $('config-msg').textContent = 'Saved. Applies from the next track.';
+            })
+            .catch(showConfigError);
+        }
+
+        $('btn-save').onclick = function() {
+          saveConfig(false);
+        };
+        $('btn-apply').onclick = function() {
+          saveConfig(true);
+        };
+        $('btn-discard').onclick = function() {
+          if (!dirty || confirm('Discard your unsaved changes?')) loadConfig().catch(showConfigError);
+        };
+
+        renderSettings();
+
+        function showConfigError(e) {
+          $('config-msg').className = 'note bad';
+          $('config-msg').textContent = e.message;
+        }
+
+        // ---- Library ----
+        function renderLibrary() {
+          var filter = $('lib-filter').value.toLowerCase();
+          var list = $('library');
+          list.textContent = '';
+          var shown = libraryFiles.filter(function(f) {
+            return !filter || f.toLowerCase().indexOf(filter) !== -1;
+          });
+          shown.slice(0, 500).forEach(function(f) {
+            var li = document.createElement('li');
+            li.textContent = fileName(f);
+            li.title = f;
+            list.appendChild(li);
+          });
+          $('lib-count').textContent = libraryFiles.length
+            ? '(' + (filter ? shown.length + ' of ' : '') + libraryFiles.length + ' files' + (shown.length > 500 ? ', first 500 shown' : '') + ')'
+            : '';
+        }
+
+        $('btn-lib').onclick = function() {
+          $('btn-lib').disabled = true;
+          $('btn-lib').textContent = 'Loading…';
+          api('GET', '/library/audio')
+            .then(function(data) {
+              libraryFiles = data.audio.slice().sort();
+              renderLibrary();
+            })
+            .catch(function(e) {
+              $('lib-count').textContent = 'Could not load: ' + e.message;
+            })
+            .then(function() {
+              $('btn-lib').disabled = false;
+              $('btn-lib').textContent = 'Reload library';
+            });
+        };
+        $('lib-filter').oninput = renderLibrary;
+
+        // ---- Session ----
+        var timer = null;
+        var tickCount = 0;
+
+        function tick() {
+          if (!auth) return;
+          var jobs = [refreshStatus(), refreshLog()];
+          if (tickCount % 5 === 0) jobs.push(refreshHistory());
+          tickCount++;
+          Promise.all(jobs).catch(function(e) {
+            if (e.message === 'unauthorized') return;
+            $('status').className = 'pill down';
+            $('status-text').textContent = 'Unreachable';
+          });
+        }
+
+        // Check the credentials work, then show the console
+        function enter(newAuth, remember) {
+          auth = newAuth;
+          return api('GET', '/stream').then(function() {
+            store.set(newAuth, remember);
+            $('whoami').textContent = newAuth.user ? 'Signed in as ' + newAuth.user : 'Signed in with API key';
+            $('login').classList.add('hidden');
+            $('app').classList.remove('hidden');
+            lastLogId = 0;
+            $('log').textContent = '';
+            tick();
+            loadConfig().catch(showConfigError);
+            clearInterval(timer);
+            timer = setInterval(tick, 2000);
+          });
+        }
+
+        function showLogin(message) {
+          $('app').classList.add('hidden');
+          $('login').classList.remove('hidden');
+          $('login-msg').textContent = message || '';
+          $('login-user').classList.toggle('hidden', keyMode);
+          $('login-key').classList.toggle('hidden', !keyMode);
+          $('toggle-mode').textContent = keyMode ? 'Use username and password' : 'Use API key instead';
+          $('password').value = '';
+          $('key').value = '';
+          (keyMode ? $('key') : $('username').value ? $('password') : $('username')).focus();
+        }
+
+        function signOut(message) {
+          auth = null;
+          clearInterval(timer);
+          store.clear();
+          $('config').value = '';
+          currentConfig = null;
+          dirty = false;
+          showLogin(message);
+        }
+
+        $('signout').onclick = function() {
+          if (auth && auth.user) api('POST', '/console/logout', {}).catch(function() {});
+          signOut();
+        };
+
+        $('toggle-mode').onclick = function(ev) {
+          ev.preventDefault();
+          keyMode = !keyMode;
+          showLogin();
+        };
+
+        $('login').onsubmit = function(ev) {
+          ev.preventDefault();
+          $('login-msg').textContent = '';
+          var remember = $('remember').checked;
+          var attempt;
+
+          if (keyMode) {
+            if (!$('key').value) return;
+            attempt = enter({ header: $('key').value, user: null }, remember);
+          } else {
+            if (!$('username').value || !$('password').value) return;
+            auth = null;
+            attempt = api('POST', '/console/login', { username: $('username').value, password: $('password').value }).then(function(data) {
+              return enter({ header: 'Session ' + data.token, user: data.username }, remember);
+            });
+          }
+
+          attempt.catch(function(e) {
+            if (e.message === 'unauthorized') return;
+            auth = null;
+            $('password').value = '';
+            $('login-msg').textContent = e.message === 'Failed to fetch' ? 'Could not reach the console server.' : e.message;
+          });
+        };
+
+        var saved = store.get();
+        if (saved) {
+          keyMode = !saved.user;
+          enter(saved, false).catch(function(e) {
+            // A bad key or expired session already signed us out. For anything else (server down), keep it saved
+            if (e.message === 'unauthorized') return;
+            auth = null;
+            showLogin('Could not reach the console server: ' + e.message);
+          });
+        } else {
+          showLogin();
+        }
+      })();
+    </script>
+  </body>
+</html>

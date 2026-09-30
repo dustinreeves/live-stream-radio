@@ -2,7 +2,7 @@
 
 // Parse our input
 const argv = require('minimist')(process.argv.slice(2), {
-  string: ['help', 'generate', 'output', 'start'],
+  string: ['help', 'generate', 'output', 'start', 'set-password'],
   alias: {
     h: ['help'],
     v: ['version'],
@@ -28,6 +28,8 @@ ${chalk.blue('USAGE:')} ${chalk.yellow(pkg.name)}
     in the config.json, and output to the location. 
     Helpful for testing output and development.
   ${chalk.blue('--start, -s')} ${chalk.magenta('[Project Name/Directory]')} : Start the stream using the passed directory.
+  ${chalk.blue('--set-password')} ${chalk.magenta('[Project Name/Directory]')} : Add a web console user, or change
+    their password, in the project's config.json.
   ${chalk.yellow('Default:')}
   Will assume the --start flag if no flag is passed.
   E.g 
@@ -54,11 +56,20 @@ if (argv.generate !== undefined) {
   process.exit(0);
 }
 
+// Check if we would like to add a web console user
+if (argv['set-password'] !== undefined) {
+  require('./setPassword')(argv['set-password']);
+  return;
+}
+
 // Start the server
 const fs = require('fs');
 const chalk = require('chalk');
 
 const historyService = require('./history.service');
+
+// Keep recent output in memory for the web console's log view
+require('./status.service').captureConsole();
 
 // Check if we passed in a base path
 let path = process.cwd();
@@ -102,6 +113,8 @@ if (fs.existsSync(configJsPath)) {
   getConfig = async () => {
     let configJson = undefined;
     try {
+      // Drop the cached copy so edits to config.json (from the api or by hand) are picked up
+      delete require.cache[require.resolve(configJsonPath)];
       configJson = require(configJsonPath);
     } catch (e) {
       console.log(`${chalk.red('error reading the config.json!')} 😞`);

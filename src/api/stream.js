@@ -1,4 +1,5 @@
 const historyService = require('../history.service');
+const statusService = require('../status.service');
 const authService = require('./auth');
 
 // Function to perform all checks before performing route
@@ -98,6 +99,36 @@ module.exports = (fastify, path, stream, getConfig) => {
       reply.type('application/json').code(200);
       return {
         history: historyService.getHistory()
+      };
+    })
+  );
+
+  // Detailed status for the web console: what is playing and how far along it is
+  fastify.get(
+    '/stream/status',
+    authService.secureRouteHandler(getConfig, async (request, reply) => {
+      const isRunning = stream.isRunning();
+      const history = historyService.getHistory();
+
+      reply.type('application/json').code(200);
+      return {
+        isRunning: isRunning,
+        nowPlaying: isRunning && history.length > 0 ? history[history.length - 1] : null,
+        progress: isRunning ? statusService.getProgress() || null : null,
+        uptime: Math.floor(process.uptime())
+      };
+    })
+  );
+
+  // Recent log output, pass ?since=<id> to only get newer lines
+  fastify.get(
+    '/stream/log',
+    authService.secureRouteHandler(getConfig, async (request, reply) => {
+      const since = parseInt(request.query.since, 10) || 0;
+
+      reply.type('application/json').code(200);
+      return {
+        log: statusService.getLog(since)
       };
     })
   );

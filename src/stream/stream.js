@@ -8,9 +8,11 @@ const progress = require('cli-progress');
 // Get our Services and helper fucntions
 const safeStrings = require('./safeStrings');
 const historyService = require('../history.service');
+const statusService = require('../status.service');
 const supportedFileTypes = require('../supportedFileTypes');
 const getRandomFileWithExtensionFromPath = require('./randomFile');
 const getOverlayTextString = require('./overlayText');
+const { isEnabled } = require('../configValues');
 
 // Allow pre rendering the next video if needed
 let nextVideo = undefined;
@@ -18,7 +20,7 @@ let nextTypeKey = undefined;
 
 const getTypeKey = config => {
   let typeKey = 'radio';
-  if (config.interlude.enabled) {
+  if (config.interlude && isEnabled(config.interlude.enabled)) {
     const randomNumber = Math.random();
     const frequency = parseFloat(config.interlude.frequency, 10);
     if (randomNumber <= frequency) {
@@ -181,7 +183,7 @@ module.exports = async (path, config, outputLocation, endCallback, errorCallback
   complexFilterString += `[delayedaudio][2:a] amix=inputs=2:duration=first:dropout_transition=3 [audiooutput]; `;
 
   // Check if we want normalized audio
-  if (config.normalize_audio) {
+  if (isEnabled(config.normalize_audio)) {
     // Use the loudnorm filter
     // http://ffmpeg.org/ffmpeg-filters.html#loudnorm
     complexFilterString += `[audiooutput] loudnorm [audiooutput]; `;
@@ -211,9 +213,9 @@ module.exports = async (path, config, outputLocation, endCallback, errorCallback
   // videos. And scaled the image to the video, preserving video quality
   if (
     config[typeKey].overlay &&
-    config[typeKey].overlay.enabled &&
+    isEnabled(config[typeKey].overlay.enabled) &&
     config[typeKey].overlay.image &&
-    config[typeKey].overlay.image.enabled
+    isEnabled(config[typeKey].overlay.image.enabled)
   ) {
     // Add our image input
     const imageObject = config[typeKey].overlay.image;
@@ -227,7 +229,7 @@ module.exports = async (path, config, outputLocation, endCallback, errorCallback
   }
 
   // Add our overlayText
-  const overlayTextFilterString = await getOverlayTextString(path, config, typeKey, metadata);
+  const overlayTextFilterString = await getOverlayTextString(path, config, typeKey, metadata, randomSong);
   if (overlayTextFilterString) {
     if (complexFilterString.length > 0) {
       complexFilterString += `, `;
@@ -256,7 +258,8 @@ module.exports = async (path, config, outputLocation, endCallback, errorCallback
     .on('start', commandString => {
       console.log(' ');
       console.log(`${chalk.blue('Spawned Ffmpeg with command:')}`);
-      console.log(commandString);
+      // Hide the stream key, the log is visible in the web console
+      console.log(config.stream_key ? commandString.split(config.stream_key).join('<stream_key>') : commandString);
       console.log(' ');
 
       // Start our progress bar
@@ -283,6 +286,13 @@ module.exports = async (path, config, outputLocation, endCallback, errorCallback
 
       // Set seconds onto progressBar
       progressBar.update(seconds);
+
+      // Save for the api / web console
+      statusService.setProgress({
+        seconds: seconds,
+        fps: progress.currentFps,
+        kbps: progress.currentKbps
+      });
     });
 
   // Get our stream duration
@@ -387,9 +397,12 @@ module.exports = async (path, config, outputLocation, endCallback, errorCallback
   // Add this item to our history
   const historyMetadata = metadata.common;
   delete historyMetadata.picture;
+  statusService.clearProgress();
   historyService.addItemToHistory({
+    type: typeKey,
     audio: {
       path: randomSong,
+      duration: metadata.format.duration,
       metadata: historyMetadata
     },
     video: {

@@ -252,3 +252,113 @@ Changes a config param in the config.json. If they key has no value, it will be 
     }
 }
 ```
+
+
+## PUT /config
+
+### Description
+
+Replaces the whole config.json. The previous file is kept as `config.json.bak`. Used by the web console's config editor.
+
+### Body Params
+
+* `config` - The complete new config, as a JSON object. It must keep its `api` section.
+
+### Example Response:
+**HTTP 200** - Successful
+```
+{
+    "message": "OK",
+    "backup": "config.json.bak"
+}
+```
+**HTTP 400** - Not an object, or missing the `api` section
+
+## GET /stream/status
+
+### Description
+
+Detailed stream status: whether it is running, the item currently playing (same shape as a history item), and ffmpeg's progress through it. `progress.seconds` includes the 3 second lead-in silence.
+
+### Example Successful Response:
+
+```
+{
+    "isRunning": true,
+    "nowPlaying": {
+        "type": "radio",
+        "audio": { "path": "...", "duration": 3512.4, "metadata": { "title": "...", "artist": "..." } },
+        "video": { "path": "..." },
+        "date": 1790000000000
+    },
+    "progress": { "seconds": 612, "fps": 25, "kbps": 2630.1, "date": 1790000612000 },
+    "uptime": 86400
+}
+```
+
+## GET /stream/log
+
+### Description
+
+Returns up to the last 500 lines of console output, with color codes removed.
+
+### Query Params
+
+* `since` - (optional) Only return lines with an `id` greater than this.
+
+### Example Successful Response:
+
+```
+{
+    "log": [
+        { "id": 41, "date": 1790000000000, "text": "Playing the audio:" }
+    ]
+}
+```
+
+## GET /console
+
+### Description
+
+The web console: a page for remotely controlling the stream (start / stop / skip), watching what is playing and the log, editing the config and browsing the library. Open `http://<api host>:<api port>/console` in a browser and sign in with a console user, or with the `api.key`.
+
+Add a console user (or change their password) on the machine running the stream:
+
+```
+live-stream-radio --set-password [Project Name/Directory]
+```
+
+This stores the username and a hashed password in `console.users` in the config.json. Signed in sessions last `console.session_hours` (default 12) and end when the stream process restarts. After 5 wrong passwords from one address, logins from it are refused for 15 minutes.
+
+Once a console user exists, an empty `api.key` no longer leaves the api open: requests need a signed in session (or the key, if one is set).
+
+The console is disabled unless `api.key` is set or a console user exists. Credentials are sent with every request, so only expose the console over HTTPS (for example behind nginx) or an SSH tunnel, never plain HTTP on the open internet.
+
+## POST /console/login
+
+### Description
+
+Signs in a web console user. Does not need the api key.
+
+### Body Params
+
+* `username`
+* `password`
+
+### Example Response:
+**HTTP 200** - Successful. Send the token as `Authorization: Session <token>` on other requests.
+```
+{
+    "token": "3f9a...",
+    "username": "dcr",
+    "expires": 1790043200000
+}
+```
+**HTTP 401** - Wrong username or password
+**HTTP 429** - Too many failed logins from this address
+
+## POST /console/logout
+
+### Description
+
+Ends the session passed as `Authorization: Session <token>`.

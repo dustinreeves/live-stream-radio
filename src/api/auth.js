@@ -1,10 +1,36 @@
+const crypto = require('crypto');
+const usersService = require('./users');
+
+// Compare keys in constant time, hashing first so different lengths are safe to compare
+const keysMatch = (expectedKey, providedKey) => {
+  if (typeof providedKey !== 'string') {
+    return false;
+  }
+
+  const expectedHash = crypto
+    .createHash('sha256')
+    .update(String(expectedKey))
+    .digest();
+  const providedHash = crypto
+    .createHash('sha256')
+    .update(providedKey)
+    .digest();
+  return crypto.timingSafeEqual(expectedHash, providedHash);
+};
+
 // Function to verify a key
 const verifyKey = async (getConfig, request) => {
   // Get our returned config
-  config = await getConfig();
+  const config = await getConfig();
 
-  if (!config.api.key) {
+  // A signed in web console user
+  if (usersService.getSessionFromRequest(request)) {
     return true;
+  }
+
+  // With no key and no console users the api is open, as before
+  if (!config.api.key) {
+    return !usersService.hasUsers(config);
   }
 
   // Array of places to store the API key
@@ -16,7 +42,7 @@ const verifyKey = async (getConfig, request) => {
   }
 
   return supportedApiKeyFields.some(keyField => {
-    return config.api.key === keyField;
+    return keysMatch(config.api.key, keyField);
   });
 };
 

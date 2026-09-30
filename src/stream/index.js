@@ -8,7 +8,7 @@ let currentPath = undefined;
 // Save our current getConfig cuntion
 let currentGetConfig = undefined;
 
-// Save our current outputlocation
+// Save the --output override from the cli, if any
 let currentOutputLocation = undefined;
 
 // Save a reference to our ffmpegCommand
@@ -68,10 +68,11 @@ const moduleExports = {
     // Get our config, this will refresh on every song
     let config = await currentGetConfig();
 
-    //  Build our stream outputs
-    if (!currentOutputLocation) {
+    //  Build our stream outputs, from the config every time so url / key changes apply on the next song
+    let outputLocation = currentOutputLocation;
+    if (!outputLocation) {
       if (config.stream_outputs) {
-        currentOutputLocation = config.stream_outputs;
+        outputLocation = config.stream_outputs;
       } else {
         if (!config.stream_url || !config.stream_key) {
           console.log(`${chalk.red('Missing stream_url or stream_key in your config.json !')} 😟`);
@@ -82,18 +83,23 @@ const moduleExports = {
 
         let streamUrl = config.stream_url;
         streamUrl = streamUrl.replace('$stream_key', config.stream_key);
-        currentOutputLocation = streamUrl;
+        outputLocation = streamUrl;
       }
     }
 
-    console.log(`${chalk.magenta('Streaming to:')} ${currentOutputLocation}`);
+    // Don't print the stream key into the logs, they are visible in the web console
+    let loggedOutputLocation = String(outputLocation);
+    if (config.stream_key) {
+      loggedOutputLocation = loggedOutputLocation.split(config.stream_key).join('<stream_key>');
+    }
+    console.log(`${chalk.magenta('Streaming to:')} ${loggedOutputLocation}`);
     console.log('\n');
 
     // Listen for errors again
     shouldListenForFfmpegErrors = true;
 
     // Start the stream again
-    ffmpegCommandPromise = stream(currentPath, config, currentOutputLocation, endCallback, errorCallback);
+    ffmpegCommandPromise = stream(currentPath, config, outputLocation, endCallback, errorCallback);
     await ffmpegCommandPromise;
   },
   stop: async () => {
@@ -124,6 +130,8 @@ const moduleExports = {
         waitForPidToBeKilled();
       });
     }
+
+    require('../status.service').clearProgress();
 
     console.log('\n');
     console.log(`${chalk.red('Stream stopped!')} 😃`);

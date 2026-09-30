@@ -8,6 +8,7 @@ fastify.register(require('fastify-formbody'));
 const addStreamRoutes = require('./stream.js');
 const addConfigRoutes = require('./config.js');
 const addLibraryRoutes = require('./library.js');
+const addConsoleRoutes = require('./console.js');
 
 let currentStream;
 let currentGetConfig;
@@ -29,6 +30,7 @@ module.exports = {
     addStreamRoutes(fastify, path, currentStream, currentGetConfig);
     addConfigRoutes(fastify, path, currentStream, currentGetConfig);
     addLibraryRoutes(fastify, path, currentStream, currentGetConfig);
+    addConsoleRoutes(fastify, path, currentStream, currentGetConfig);
 
     const config = await getConfig();
 

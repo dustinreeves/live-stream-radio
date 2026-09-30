@@ -35,6 +35,8 @@ This page will go in detail with every field of a projects `config.json`. If you
 | api.port | Port on which the API runs on. |
 | api.key | API Key used for authentication. This is basically your admin password, so keep it secret! |
 | api.number_of_history_items | Number of items to store in the streams history to get the last played songs. |
+| console.users | Web console users, as `{ "username": "...", "password_hash": "..." }`. Add them with `live-stream-radio --set-password [Project Directory]` rather than by hand. Once a user exists, an empty `api.key` no longer leaves the API open. |
+| console.session_hours | How long a web console sign-in lasts, in hours. Defaults to 12. |
 | radio.audio_directory | Path to your music. Check out the FAQ for supported file types. |
 | radio.video_directory | Path to your videos and gifs. Check out the FAQ for supported file types. |
 | radio.overlay.enabled | Enables/Disables overlays. |
@@ -54,6 +56,8 @@ This page will go in detail with every field of a projects `config.json`. If you
 | interlude.overlay.title | Common Text Object for the a title. |
 | interlude.overlay.image | Common Image Object for an overlay over the text and video. |
 
+On / off fields accept `true` / `false` or the strings `"true"` / `"false"`. The config is re-read at the start of every song, so changes apply from the next song, except the `api` fields, which need a restart.
+
 ### Video HeightWidth Ratio
 These are common values for the `video_height` and `video_width` fields.
 
@@ -72,7 +76,10 @@ Common Text Objects contain all settings required to display text.
 | Field | Usage |
 | - | - |
 | enabled | Enables/Disables this text object |
-| text | Text string for this object |
+| text | Text string for this object (title only) |
+| label | Text shown before the tag value (artist, album and song only), e.g. `"Artist: "`. The line is hidden when the file has no such tag, except song, which falls back to the file name. |
+| enable_scroll | Scroll the text across the screen instead of using position_x |
+| font_scroll_speed | Seconds for one scroll across the screen, used with enable_scroll |
 | font_color | HEX color with leading # of the fonts color |
 | font_border | HEX color with leading # of the fonts border color |
 | font_size | Size of the font |

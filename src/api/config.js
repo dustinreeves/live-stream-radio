@@ -37,7 +37,34 @@ const changeConfig = async (path, config, key, newValue) => {
   return [200, { key: key, oldValue: currentValue, newValue: JSON.parse(newValue) }];
 };
 
+const replaceConfig = async (path, newConfig) => {
+  if (!newConfig || typeof newConfig !== 'object' || Array.isArray(newConfig)) {
+    return [400, { message: 'config must be a JSON object' }];
+  }
+  if (!newConfig.api || typeof newConfig.api !== 'object') {
+    return [400, { message: 'config must keep its "api" section, or the api would stop working' }];
+  }
+
+  // Keep the previous version next to it, in case of a bad edit
+  const configPath = upath.join(path, 'config.json');
+  await fs.copy(configPath, `${configPath}.bak`);
+  await fs.writeJson(configPath, newConfig, { spaces: 2 });
+
+  return [200, { message: 'OK', backup: 'config.json.bak' }];
+};
+
 module.exports = (fastify, path, stream, getConfig) => {
+  // Replace the whole config.json, body is { config: {...} }
+  fastify.put(
+    '/config',
+    authService.secureRouteHandler(getConfig, async (request, reply) => {
+      const response = await replaceConfig(path, request.body && request.body.config);
+
+      reply.type('application/json').code(response[0]);
+      return response[1];
+    })
+  );
+
   fastify.get(
     '/config',
     authService.secureRouteHandler(getConfig, async (request, reply) => {
