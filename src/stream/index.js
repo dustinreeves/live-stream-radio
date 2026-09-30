@@ -68,11 +68,14 @@ const moduleExports = {
     // Get our config, this will refresh on every song
     let config = await currentGetConfig();
 
+    // Work around fluent-ffmpeg not understanding newer ffmpeg's format list
+    await require('./ffmpegCompat')(config);
+
     //  Build our stream outputs, from the config every time so url / key changes apply on the next song
-    let outputLocation = currentOutputLocation;
-    if (!outputLocation) {
+    let streamOutput = currentOutputLocation;
+    if (!streamOutput) {
       if (config.stream_outputs) {
-        outputLocation = config.stream_outputs;
+        streamOutput = config.stream_outputs;
       } else {
         if (!config.stream_url || !config.stream_key) {
           console.log(`${chalk.red('Missing stream_url or stream_key in your config.json !')} 😟`);
@@ -83,12 +86,12 @@ const moduleExports = {
 
         let streamUrl = config.stream_url;
         streamUrl = streamUrl.replace('$stream_key', config.stream_key);
-        outputLocation = streamUrl;
+        streamOutput = streamUrl;
       }
     }
 
     // Don't print the stream key into the logs, they are visible in the web console
-    let loggedOutputLocation = String(outputLocation);
+    let loggedOutputLocation = String(streamOutput);
     if (config.stream_key) {
       loggedOutputLocation = loggedOutputLocation.split(config.stream_key).join('<stream_key>');
     }
@@ -99,7 +102,7 @@ const moduleExports = {
     shouldListenForFfmpegErrors = true;
 
     // Start the stream again
-    ffmpegCommandPromise = stream(currentPath, config, outputLocation, endCallback, errorCallback);
+    ffmpegCommandPromise = stream(currentPath, config, streamOutput, endCallback, errorCallback);
     await ffmpegCommandPromise;
   },
   stop: async () => {

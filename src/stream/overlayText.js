@@ -1,17 +1,38 @@
 // Overlay text for the stream
+const fs = require('fs');
+const os = require('os');
 const upath = require('upath');
-const safeStrings = require('./safeStrings');
 const { isEnabled } = require('../configValues');
+
+// Quote a file path for use as a filter option. Forward slashes, and the drive letter colon
+// escaped, so Windows paths like C:\radio\font.ttf work as well as Linux ones
+const filterPath = filePath => {
+  const escaped = upath
+    .normalize(filePath)
+    .replace(/:/g, '\\:')
+    .replace(/'/g, "'\\''");
+  return `'${escaped}'`;
+};
+
+// The text is written to a file and read with textfile=, with expansion off, rather than
+// escaped into the filter. Titles and tags can contain anything (apostrophes, colons, %),
+// and escaping them into the filter reliably is not possible across ffmpeg versions.
+// The file is read once when ffmpeg starts, so it's safe to overwrite for the next track.
+const writeTextFile = (key, text) => {
+  const textPath = upath.join(os.tmpdir(), `live-stream-radio-overlay-${process.pid}-${key}.txt`);
+  fs.writeFileSync(textPath, text);
+  return textPath;
+};
 
 // Build a drawtext filter for one Common Text Object
 // Note: Positions and sizes are done relative to the input video width and height
 // Therefore position x/y is a percentage, like CSS style.
 // Font size is simply just a fraction of the width
-const getDrawText = (itemObject, text, fontPath) => {
-  const safeText = safeStrings.forFilter(text);
+const getDrawText = (key, itemObject, text, fontPath) => {
   let itemString =
-    `drawtext=text='${safeText}'` +
-    `:fontfile=${fontPath}` +
+    `drawtext=textfile=${filterPath(writeTextFile(key, text))}` +
+    `:expansion=none` +
+    `:fontfile=${filterPath(fontPath)}` +
     `:fontsize=(w * ${itemObject.font_size / 300})` +
     `:bordercolor=${itemObject.font_border}` +
     `:borderw=1` +
@@ -53,7 +74,7 @@ const getOverlayTextString = async (path, config, typeKey, metadata, audioPath) 
   textItems.forEach(([key, text]) => {
     const itemObject = overlayConfigObject[key];
     if (itemObject && isEnabled(itemObject.enabled) && text) {
-      overlayTextItems.push(getDrawText(itemObject, text, fontPath));
+      overlayTextItems.push(getDrawText(`${typeKey}-${key}`, itemObject, String(text), fontPath));
     }
   });
 
