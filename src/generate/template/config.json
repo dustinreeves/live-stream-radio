@@ -19,7 +19,7 @@
   "api": {
     "host": "localhost",
     "port": "8000",
-    "key": "super-secret-api-key",
+    "key": "",
     "number_of_history_items": 100
   },
   "radio": {

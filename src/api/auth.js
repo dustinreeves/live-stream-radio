@@ -1,6 +1,13 @@
 const crypto = require('crypto');
 const usersService = require('./users');
 
+// The api key older generated projects shipped with, the same for everyone
+const EXAMPLE_API_KEY = 'super-secret-api-key';
+
+const usesDefaultApiKey = config => {
+  return Boolean(config.api) && config.api.key === EXAMPLE_API_KEY;
+};
+
 // Compare keys in constant time, hashing first so different lengths are safe to compare
 const keysMatch = (expectedKey, providedKey) => {
   if (typeof providedKey !== 'string') {
@@ -64,5 +71,6 @@ const secureRouteHandler = (getConfig, routeHandler) => {
 // File to handle api authentication
 module.exports = {
   verifyKey: verifyKey,
+  usesDefaultApiKey: usesDefaultApiKey,
   secureRouteHandler: secureRouteHandler
 };

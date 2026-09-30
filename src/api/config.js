@@ -1,56 +1,77 @@
 const authService = require('./auth');
 const upath = require('upath');
 const fs = require('fs-extra');
-const editJsonFile = require('edit-json-file');
+const configFile = require('../configFile');
 
 const getFullConfig = async path => {
-  // Get current config
-  let config = editJsonFile(upath.join(path, 'config.json'));
-
-  // Return Config
-  return [200, config.toObject()];
+  // Return the current config
+  return [200, await configFile.readConfig(upath.join(path, 'config.json'))];
 };
 
 const getConfigByKey = async (path, key) => {
-  // Get current config
-  let configFile = editJsonFile(upath.join(path, 'config.json'));
+  const config = await configFile.readConfig(upath.join(path, 'config.json'));
 
-  // Return Config by a specific key
-  let configValue = configFile.get(key);
-
-  // Return 200 if it has a value and 404 if it does not have a value
-  if (configValue) {
+  // Return 200 if the key exists (even for values like false or 0) and 404 if it does not
+  const configValue = configFile.getValue(config, key);
+  if (configValue !== undefined) {
     return [200, configValue];
   } else {
     return [404, null];
   }
 };
 
-const changeConfig = async (path, config, key, newValue) => {
+// value is JSON text (e.g. from a form), or an already parsed JSON body value
+const parseValue = value => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  return JSON.parse(value);
+};
+
+const changeConfig = async (path, key, value) => {
+  let newValue;
+  try {
+    newValue = parseValue(value);
+  } catch (e) {
+    return [400, { message: 'value must be JSON, e.g. "\\"text\\"", 5 or true' }];
+  }
+  if (newValue === undefined) {
+    return [400, { message: 'value is required' }];
+  }
+
   // Change config
-  let configFile = editJsonFile(upath.join(path, 'config.json'));
-  let currentValue = configFile.get(key);
+  const configPath = upath.join(path, 'config.json');
+  const config = await configFile.readConfig(configPath);
+  const currentValue = configFile.getValue(config, key);
+  configFile.setValue(config, key, newValue);
 
-  configFile.set(key, JSON.parse(newValue));
-  configFile.save();
+  const problem = configFile.findConfigProblem(config);
+  if (problem) {
+    return [400, { message: problem }];
+  }
+  await configFile.writeConfig(configPath, config);
 
-  return [200, { key: key, oldValue: currentValue, newValue: JSON.parse(newValue) }];
+  return [200, { key: key, oldValue: currentValue, newValue: newValue }];
 };
 
 const replaceConfig = async (path, newConfig) => {
-  if (!newConfig || typeof newConfig !== 'object' || Array.isArray(newConfig)) {
-    return [400, { message: 'config must be a JSON object' }];
-  }
-  if (!newConfig.api || typeof newConfig.api !== 'object') {
-    return [400, { message: 'config must keep its "api" section, or the api would stop working' }];
+  const problem = configFile.findConfigProblem(newConfig);
+  if (problem) {
+    return [400, { message: problem }];
   }
 
   // Keep the previous version next to it, in case of a bad edit
   const configPath = upath.join(path, 'config.json');
   await fs.copy(configPath, `${configPath}.bak`);
-  await fs.writeJson(configPath, newConfig, { spaces: 2 });
+  await configFile.writeConfig(configPath, newConfig);
 
   return [200, { message: 'OK', backup: 'config.json.bak' }];
+};
+
+// A bad key (e.g. "a..b" or "__proto__") is the request's fault
+const badKeyResponse = (reply, e) => {
+  reply.type('application/json').code(400);
+  return { message: e.message };
 };
 
 module.exports = (fastify, path, stream, getConfig) => {
@@ -70,10 +91,14 @@ module.exports = (fastify, path, stream, getConfig) => {
     authService.secureRouteHandler(getConfig, async (request, reply) => {
       // Returns full config is "key" is not set, otherwise only return the requested key
       let response;
-      if (request.query.key) {
-        response = await getConfigByKey(path, request.query.key);
-      } else {
-        response = await getFullConfig(path);
+      try {
+        if (request.query.key) {
+          response = await getConfigByKey(path, request.query.key);
+        } else {
+          response = await getFullConfig(path);
+        }
+      } catch (e) {
+        return badKeyResponse(reply, e);
       }
 
       reply.type('application/json').code(response[0]);
@@ -88,9 +113,18 @@ module.exports = (fastify, path, stream, getConfig) => {
   fastify.post(
     '/config',
     authService.secureRouteHandler(getConfig, async (request, reply) => {
-      // We need our actual config here to make sure we are reurning the static json file
-      const config = require(`${path}/config.json`);
-      let response = await changeConfig(path, config, request.body.key, request.body.value);
+      const body = request.body || {};
+      if (typeof body.key !== 'string' || body.key.length === 0) {
+        reply.type('application/json').code(400);
+        return { message: 'key is required' };
+      }
+
+      let response;
+      try {
+        response = await changeConfig(path, body.key, body.value);
+      } catch (e) {
+        return badKeyResponse(reply, e);
+      }
 
       reply.type('application/json').code(response[0]);
       return {

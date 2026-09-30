@@ -102,7 +102,24 @@ const getSessionFromRequest = request => {
   return undefined;
 };
 
+// Forget expired sessions and old failed logins, so they don't pile up in memory
+const removeExpired = () => {
+  const now = Date.now();
+  Object.keys(sessions).forEach(token => {
+    if (now > sessions[token].expires) {
+      delete sessions[token];
+    }
+  });
+  Object.keys(failedLogins).forEach(address => {
+    if (now - failedLogins[address].first > LOCKOUT_MINUTES * 60 * 1000) {
+      delete failedLogins[address];
+    }
+  });
+};
+
 const login = async (config, username, password, address) => {
+  removeExpired();
+
   if (isLockedOut(address)) {
     return [429, { message: `Too many failed logins, try again in ${LOCKOUT_MINUTES} minutes` }];
   }
