@@ -110,6 +110,17 @@ _All AI-written, see the warning at the top._
 - **Reverse proxy configs** for Caddy and nginx, and `api.trust_proxy`.
 - **The stream key stays out of the logs.** It is replaced with `<stream_key>` in log output, since the log is visible in the web console.
 - **API keys are compared in constant time.**
+- **The station keeps running when a track fails.** An ffmpeg error, the stream server dropping the connection, an unreadable file or an empty folder used to exit the whole process. The next track is now tried after 2 seconds, waiting up to a minute while it keeps failing, and the api and console stay up.
+- **A broken config edit doesn't stop the stream.** If `config.json` (or `config.js`) stops loading, the last config that worked is used until it's fixed. `PUT` / `POST /config` refuse configs the stream can't run, and write `config.json` atomically.
+- **Songs play at full volume.** Mixing in the silent track halved the song's volume (-6 dB) unless `normalize_audio` was on.
+- **Several stream outputs at once.** `stream_outputs` can list several URLs, and all of them are used (before, only the first was).
+- **Quick skips can't leave two ffmpegs running.** Stopping or skipping right after a track started could crash, or leave an ffmpeg streaming that nothing tracked.
+- **History keeps the newest tracks.** After 100 tracks, history kept only the first track ever played, and showed it as playing now.
+- **Every generated project gets its own api key**, instead of the shared `super-secret-api-key`, which is refused when the api can be reached from other computers.
+- **Absolute project folders work**, e.g. `live-stream-radio /srv/radio`.
+- **More audio formats** (`.m4a`, `.aac`, `.ogg`, `.opus`), extensions in any case, and folders are scanned once a minute rather than for every track.
+- **Gifs are converted once** and reused, and temp files are cleaned up.
+- **Tests** (`npm test`) and CI.
 
 # API Frontends
 

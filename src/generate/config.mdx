@@ -14,6 +14,7 @@ This page will go in detail with every field of a projects `config.json`. If you
 | - | - |
 | stream_url | The URL of the stream. You can use $stream_key as a variable, this will replace it with the value of stream_key. You can overwrite this field with the `--output` CLI flag. |
 | stream_key | The stream key provided by your stream platform. |
+| stream_outputs | Optional, used instead of stream_url / stream_key. One output URL, or a list of them to stream to several places at once (e.g. YouTube and Twitch). With a list, the video is encoded once and sent to all of them; if one of them fails, the others keep going. |
 | ffmpeg_path | The path to your ffmpeg binaries. If this field is left empty, the project will try to find ffmpeg binaries specified in your path. |
 | video_codec | The codec used by ffmpeg to encode the stream video output. |
 | audio_codec | The codec used by ffmpeg to encode the stream audio output. |
@@ -22,8 +23,8 @@ This page will go in detail with every field of a projects `config.json`. If you
 | audio_bit_rate | The audio bitrate of your stream. |
 | audio_sample_rate | The audio sample rate of your steam. |
 | normalize_audio | True/false value to enable or disable audio normalization across the stream. This can degrade audio quality. |
-| video_height | The height of your stream. |
-| video_width | The width of your stream. |
+| video_height | The height of your stream. Defaults to 480 when video_width / video_height aren't set. |
+| video_width | The width of your stream. Defaults to 854. |
 | video_bit_rate | The bitrate of your stream. |
 | video_fps | The fps (frames per second) of your stream. |
 | bufsize | Buffer size for the stream output, denoted by `-bufsize` flag in FFmpeg |
@@ -33,7 +34,7 @@ This page will go in detail with every field of a projects `config.json`. If you
 | max_gif_size | The maximum width or height of a gif for your stream. This is used by the optimization used on gifs. |
 | api.host | Host of the API. (usually localhost) |
 | api.port | Port on which the API runs on. |
-| api.key | API Key used for authentication. This is basically your admin password, so keep it secret! |
+| api.key | API Key used for authentication. This is basically your admin password, so keep it secret! `--generate` creates a random one. The old example key `super-secret-api-key` is refused when the api can be reached from other computers (`api.host` not localhost, or `api.trust_proxy` on). |
 | api.number_of_history_items | Number of items to store in the streams history to get the last played songs. |
 | api.trust_proxy | Set to true when the api runs behind a reverse proxy (Caddy / nginx, see `proxy/`). Web console login lockouts then use the visitor address from the proxy's `X-Forwarded-For` header, instead of localhost. Leave it off otherwise. |
 | console.users | Web console users, as `{ "username": "...", "password_hash": "..." }`. Add them with `live-stream-radio --set-password [Project Directory]` rather than by hand. Once a user exists, an empty `api.key` no longer leaves the API open. |
