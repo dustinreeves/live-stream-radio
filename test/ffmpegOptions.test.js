@@ -15,8 +15,11 @@ test('the filter keeps the song at full volume', () => {
 
 test('loudnorm is resampled back down', () => {
   const filter = ffmpegOptions.buildComplexFilter({ normalize_audio: 'true', audio_sample_rate: '48000' }, undefined, '');
-  assert.match(filter, /volume=2, loudnorm, aresample=48000 \[audiooutput\]/);
-  assert.match(ffmpegOptions.buildComplexFilter({ normalize_audio: true }, undefined, ''), /aresample=44100/);
+  assert.match(filter, /volume=2, loudnorm, aformat=sample_rates=48000:channel_layouts=stereo \[audiooutput\]/);
+  assert.match(
+    ffmpegOptions.buildComplexFilter({ normalize_audio: true }, undefined, ''),
+    /aformat=sample_rates=44100:channel_layouts=stereo/
+  );
 });
 
 test('overlay image and text', () => {

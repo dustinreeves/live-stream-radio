@@ -41,8 +41,10 @@ const buildComplexFilter = (config, imageObject, overlayTextFilterString) => {
   if (isEnabled(config.normalize_audio)) {
     // Use the loudnorm filter
     // http://ffmpeg.org/ffmpeg-filters.html#loudnorm
-    // loudnorm outputs 192kHz, more than aac can take, so bring it back down
-    audioFilter += `, loudnorm, aresample=${parseInt(config.audio_sample_rate, 10) || DEFAULT_SAMPLE_RATE}`;
+    // loudnorm outputs 192kHz, more than aac can take, so bring it back down. The channel layout is given too:
+    // with only a sample rate, ffmpeg 5.x can fail to pick one ("Cannot select channel layout") and stop
+    const sampleRate = parseInt(config.audio_sample_rate, 10) || DEFAULT_SAMPLE_RATE;
+    audioFilter += `, loudnorm, aformat=sample_rates=${sampleRate}:channel_layouts=stereo`;
   }
   filters.push(`${audioFilter} [audiooutput]`);
 
