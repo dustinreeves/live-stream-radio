@@ -31,7 +31,7 @@
       "font_path": "./fonts/Lato-Regular.ttf",
       "title": {
         "enabled": true,
-        "text": "Live Stream Radio, 24/7 Open Source Radio",
+        "text": "Podcast Radio, episodes around the clock",
         "font_color": "#FFFFFF",
         "font_border": "#000000",
         "font_size": "10",
@@ -42,7 +42,7 @@
       },
       "artist": {
         "enabled": true,
-        "label": "Artist: ",
+        "label": "From: ",
         "font_color": "#FFFFFF",
         "font_border": "#000000",
         "font_size": "10",
@@ -51,7 +51,7 @@
       },
       "album": {
         "enabled": false,
-        "label": "Album: ",
+        "label": "Show: ",
         "font_color": "#FFFFFF",
         "font_border": "#000000",
         "font_size": "10",
@@ -60,7 +60,7 @@
       },
       "song": {
         "enabled": true,
-        "label": "Song: ",
+        "label": "Episode: ",
         "font_color": "#FFFFFF",
         "font_border": "#000000",
         "font_size": "10",
@@ -86,7 +86,7 @@
       "font_path": "./fonts/Lato-Regular.ttf",
       "title": {
         "enabled": true,
-        "text": "Please wait, music shall resume shortly...",
+        "text": "Back to the episodes in a moment...",
         "font_color": "#FFFFFF",
         "font_border": "#000000",
         "font_size": "10",

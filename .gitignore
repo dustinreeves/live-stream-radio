@@ -9,11 +9,6 @@
 # Stream Testing to a file
 **/*.flv
 
-# docz
-**/.docz/**/*
-**/.docz/dist/**/*
-**/docz/dist/**/*
-
 # Logs
 logs
 *.log

@@ -113,7 +113,7 @@ say "Backing up to $BACKUP_DIR"
 $SUDO cp -a "$INSTALL_DIR" "$BACKUP_DIR"
 
 say "Installing"
-for item in src node_modules package.json package-lock.json README.md proxy scripts; do
+for item in src node_modules package.json package-lock.json README.md CHANGELOG.md LICENSE docs proxy scripts; do
   if [ -e "$NEW_DIR/$item" ]; then
     $SUDO rm -rf "${INSTALL_DIR:?}/$item"
     $SUDO cp -a "$NEW_DIR/$item" "$INSTALL_DIR/$item"

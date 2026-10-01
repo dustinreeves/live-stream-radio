@@ -47,9 +47,12 @@
   },
   "files": [
     "src",
+    "docs",
     "proxy",
     "scripts",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "keywords": [
     "podcast",
