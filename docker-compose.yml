@@ -1,0 +1,28 @@
+# Run podcast-radio with docker compose:
+#   1. Set PROJECT below to your project folder (made with: podcast-radio --generate my-stream).
+#   2. docker compose up -d --build
+#   3. docker compose logs -f
+#
+# Host networking keeps the api / web console on api.host:api.port as in config.json, so a reverse
+# proxy on the host (proxy/Caddyfile) works unchanged, as does "host": "localhost".
+services:
+  podcast-radio:
+    build: .
+    image: podcast-radio
+    container_name: podcast-radio
+    restart: unless-stopped
+    network_mode: host
+    init: true
+    # Run as the owner of the project folder, so config edits and downloaded episodes can be written.
+    # Find it with: id -u; id -g
+    user: '1000:1000'
+    volumes:
+      - ${PROJECT:-./my-stream}:/project
+      # If your audio (or any project folder) is a symlink to somewhere else, mount that too, at the same path.
+      # rslave lets mounts made after the container starts (e.g. rclone, network drives) show up inside it.
+      # Network mounts (rclone, sshfs) need --allow-other, or the container can't read them.
+      # - type: bind
+      #   source: /mnt
+      #   target: /mnt
+      #   bind:
+      #     propagation: rslave
