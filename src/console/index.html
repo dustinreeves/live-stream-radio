@@ -747,24 +747,30 @@
                   }
                 ]
               },
-              { text: 'radio.overlay.title', title: 'Title', textKey: 'text', scroll: true, h: 'Fixed text, like your station name.' },
+              {
+                text: 'radio.overlay.title',
+                title: 'Title',
+                textKey: 'text',
+                scroll: true,
+                h: 'Fixed text, like your podcast or channel name.'
+              },
               {
                 text: 'radio.overlay.artist',
-                title: 'Artist line',
+                title: 'Artist line (usually the host or show)',
                 textKey: 'label',
-                h: 'Shown before the artist tag. Hidden when a file has no artist.'
+                h: "Shown before the episode file's artist tag. Hidden when a file has no artist."
               },
               {
                 text: 'radio.overlay.album',
-                title: 'Album line',
+                title: 'Album line (usually the show name)',
                 textKey: 'label',
-                h: 'Shown before the album tag. Hidden when a file has no album.'
+                h: "Shown before the episode file's album tag. Hidden when a file has no album."
               },
               {
                 text: 'radio.overlay.song',
-                title: 'Song line',
+                title: 'Episode title line',
                 textKey: 'label',
-                h: 'Shown before the song title. Uses the file name when a file has no title tag.'
+                h: 'Shown before the episode title. Uses the file name when a file has no title tag.'
               },
               { title: 'Overlay image', fields: IMAGE_FIELDS('radio.overlay.image') }
             ]

@@ -1,170 +1,54 @@
 # podcast-radio
 
-_formerly live-stream-radio, and before that piStreamRadio._
+Run your podcast as a 24/7 live stream on YouTube, Twitch, or anywhere that takes RTMP.
 
-[Documentation](./src/index.mdx) 📚
+podcast-radio plays your episodes one after another over a looping video or image, with the show and episode title on screen. It can download new episodes from your podcast's RSS feed by itself, and you run it all from a web console in your browser.
 
-`podcast-radio` runs a 24/7 live stream of your podcast 🎙️ 📺 on YouTube, Twitch, or anywhere that takes RTMP. Episodes play one after another over a looping video or image, with the show and episode info on screen. Every episode plays before any repeats (or play them in order), and a restart carries on where it left off. It includes a [web console](#web-console) for running the stream from a browser and a REST HTTP JSON API. It's a CLI built with [Node.js](https://nodejs.org/) and powered by [FFmpeg](http://ffmpeg.org). Generated projects come with some sample audio and videos to get up and running quickly.
+- **Every episode before any repeats.** Episodes are shuffled so each one plays once per round, or they play in order, oldest to newest. A restart carries on where it left off.
+- **New episodes arrive by themselves.** Add your podcast's RSS feed and new episodes download into the rotation, keeping the newest 10 (or as many as you choose).
+- **A web console** to start, stop and skip, queue an episode to play next or right now, edit the on-screen text and settings, and watch the live log.
+- **Keeps going.** If an episode or the connection fails, it tries the next one instead of taking the stream down.
+- **Runs anywhere Docker or Node.js 22 runs**, including a small VPS. Stream to several platforms at once.
 
-> **This is a fork** of [torch2424/live-stream-radio](https://github.com/torch2424/live-stream-radio), which was archived in 2022, reworked for podcasts. It adds the [web console](#web-console) plus the changes listed under [Changes in this fork](#changes-in-this-fork). Existing projects and `config.json` files work unchanged, and the old `live-stream-radio` command still works.
+## Quick start
 
-<!-- prettier-ignore -->
-> [!WARNING]
-> **🤖 AI SLOP ALERT 🤖** Everything added in this fork (the web console, the login system, the settings form, the bug fixes, and yes, this README) was written by an AI (Claude), with a human pointing at things and saying "do that". It has been run on exactly one Windows PC against the sample songs, and not yet on a real station. It might be fine. It might set your stream on fire. Read the code before you trust it with your stream key, and please open an issue when it inevitably does something dumb.
-
-# Table of Contents
-
-- [Getting Started](#getting-started)
-- [Web Console](#web-console)
-- [Changes in this fork](#changes-in-this-fork)
-- [API Frontends](#api-frontends)
-- [Compatibility](#compatibility)
-- [Example Assets from the `--generate` template](#example-assets-from-the---generate-template)
-- [Contributing](#contributing)
-- [License](#license)
-
-# Getting Started
-
-Please see the [Documentation](./src/index.mdx) 📚 for how to get started using `podcast-radio`. In particular, the [Installation Guide](./src/stream/gettingstarted.mdx) and [CLI Usage](./src/stream/usage.mdx) will be the most useful to new users. 😄
-
-You need [Node.js](https://nodejs.org/) 22 or newer and [FFmpeg](https://ffmpeg.org/) (built with libfreetype, for the on-screen text). Install this fork with:
+You need [Node.js](https://nodejs.org/) 22 or newer and [FFmpeg](https://ffmpeg.org/download.html), or just [Docker](docs/running-on-a-server.md#docker).
 
 ```
 npm install -g github:dustinreeves/podcast-radio
+podcast-radio --generate my-podcast
 ```
 
-To update a server that already runs `podcast-radio` (or `live-stream-radio`), use [scripts/update-install.sh](./scripts/update-install.sh). It backs up the current install, installs this fork and its dependencies, restarts your services, and prints how to roll back.
+Put your episodes in `my-podcast/audio`, set `stream_key` in `my-podcast/config.json` to your YouTube stream key, then:
 
-# Web Console
+```
+podcast-radio --set-password my-podcast
+podcast-radio my-podcast
+```
 
-A browser page, served by `podcast-radio` itself, for running the station without a shell:
+Open http://localhost:8000/console and sign in. The [getting started guide](docs/getting-started.md) walks through each step.
 
-- **Control** – start, stop and skip the current track.
-- **Now playing** – the current track, its progress, and ffmpeg's live fps and bitrate.
-- **History** – the last 50 tracks and interludes.
-- **Live log** – the same output you'd see in the terminal or syslog.
-- **Stream settings** – edit the on-screen text (title, artist / album / song lines: wording, size, colours, position, scrolling), the overlay image, interludes, media folders, stream URL and key, and video / audio quality, all in a form. An _Advanced (JSON)_ tab edits the raw `config.json`.
-- **Podcast feeds** – add a podcast by its RSS feed url. New episodes download automatically and join the rotation, keeping the newest 10 (or however many you choose).
-- **Library and queue** – search the audio files the station can play, and pick what plays: _Queue_ adds a track to _Up next_, _Play now_ switches to it straight away. Queued tracks play in order (skipping interludes), then the station goes back to random. The queue is kept in memory, so a restart clears it.
+## Documentation
 
-Nothing extra to install: no build step and no new dependencies.
+| Page                                               | What's in it                                                        |
+| -------------------------------------------------- | ------------------------------------------------------------------- |
+| [Getting started](docs/getting-started.md)         | Install, create a project, add episodes, go live                    |
+| [Podcast feeds](docs/podcast-feeds.md)             | Download new episodes from RSS automatically                        |
+| [Web console](docs/web-console.md)                 | Run the stream from your browser, and reach it from other computers |
+| [Configuration](docs/configuration.md)             | Every `config.json` setting, the on-screen text, play order         |
+| [Running on a server](docs/running-on-a-server.md) | Docker, systemd, HTTPS with Caddy or nginx, updating                |
+| [Command line](docs/cli.md)                        | The `podcast-radio` command and its options                         |
+| [API](docs/api.md)                                 | The HTTP JSON API the console uses, for your own tools              |
+| [FAQ](docs/faq.md)                                 | File types, performance, stream settings, common problems           |
 
-## Setting it up
+## About this project
 
-1. **Add a console user** on the machine running the stream. You'll be asked for a username and a password (at least 10 characters, typed hidden):
+podcast-radio is a fork of [live-stream-radio](https://github.com/torch2424/live-stream-radio) by Aaron Turner, which was archived in 2022, reworked for podcasts. Projects and `config.json` files from live-stream-radio still work, and the old `live-stream-radio` command still runs it. See the [changelog](CHANGELOG.md) for what changed.
 
-   ```bash
-   podcast-radio --set-password my-radio-project
-   ```
+<!-- prettier-ignore -->
+> [!WARNING]
+> Everything added in this fork (the web console, podcast feeds, the Docker setup, the fixes, and these docs) was written by an AI (Claude), with a human pointing at things and saying "do that". It runs a real podcast stream, but read the code before you trust it with your stream key, and please [open an issue](https://github.com/dustinreeves/podcast-radio/issues) when something breaks.
 
-   Run it again with the same username to change that user's password. Users are stored in the project's `config.json` under `console.users`, with the passwords hashed (pbkdf2).
+## License
 
-2. **Open the console** at `http://<api.host>:<api.port>/console` (for a generated project, `http://localhost:8000/console`) and sign in. You can also sign in with the project's `api.key` using _Use API key instead_.
-
-The console refuses to load until a console user or an `api.key` exists.
-
-## Reaching it from another computer
-
-The console signs in with a password and then sends a session token with every request, so it must not be exposed over plain `http://` on the internet (the sign-in page warns you if it is). Keep `api.host` as `localhost` and use one of these.
-
-### HTTPS with a reverse proxy (recommended)
-
-Ready-made configs are in [`proxy/`](./proxy). Each file has step-by-step instructions at the top.
-
-|                                          | Use it when                                    | Certificate                                 |
-| ---------------------------------------- | ---------------------------------------------- | ------------------------------------------- |
-| [`proxy/Caddyfile`](./proxy/Caddyfile)   | Nothing else is using ports 80 / 443. Easiest. | Automatic, Caddy gets and renews it         |
-| [`proxy/nginx.conf`](./proxy/nginx.conf) | nginx is already running on the server         | One `certbot --nginx` command, auto-renewed |
-
-Not sure? Check what's listening: `sudo ss -tlnp | grep -E ':(80|443) '`.
-
-In short:
-
-1. Point a DNS name (e.g. `radio.example.com`) at the server.
-2. Copy the config, replacing `radio.example.com` (and `8000` if you changed `api.port`).
-3. In `config.json`, add `"trust_proxy": true` to the `api` section, keeping `"host": "localhost"`, and restart `podcast-radio`. Behind a proxy every request comes from localhost; this makes the login lockout use each visitor's real address (from `X-Forwarded-For`), so someone else guessing passwords can't lock you out. Only turn it on behind a proxy.
-4. Open `https://radio.example.com`, which redirects to the console.
-
-### SSH tunnel
-
-No setup, good for occasional use: from your own computer run `ssh -L 8000:localhost:8000 you@your-server`, then open `http://localhost:8000/console` while the tunnel is open.
-
-## When changes apply
-
-| Setting                                                               | Takes effect                                                                    |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| On-screen text, image, interludes, folders, quality, stream URL / key | From the next track. _Save & apply now_ in the console skips to it immediately. |
-| `api.host`, `api.port`, `api.number_of_history_items`                 | After restarting the process (e.g. `sudo systemctl restart my-radio.service`).  |
-| Console users and `console.session_hours`                             | On the next sign in.                                                            |
-
-Sessions last `console.session_hours` (default 12) and end if the process restarts. After 5 wrong passwords from one address, sign-ins from it are refused for 15 minutes.
-
-New API endpoints used by the console (`GET /stream/status`, `GET /stream/log`, `PUT /config`, `POST /console/login`, `POST /console/logout`) are documented in [src/api/endpoints.mdx](./src/api/endpoints.mdx).
-
-# Changes in this fork
-
-_All AI-written, see the warning at the top._
-
-- **Web console** with username / password sign-in, as above.
-- **Config changes apply without a restart.** Before, `config.json` was cached when the process started, so edits (by hand or through `POST /config`) were ignored until a restart. It is now re-read at the start of every track, including the stream URL and key.
-- **`"false"` now means false.** On/off settings written as strings (the generated template ships `"enabled": "true"`) were always treated as on, so `"false"` did nothing. `true` / `false` and `"true"` / `"false"` now both work.
-- **Missing tags don't show "undefined".** Files with no artist or album tag skip that overlay line instead of showing `Artist: undefined`, and files with no title tag show their file name. Handy for podcast archives.
-- **Apostrophes can't crash the stream.** A `'` in the overlay title or in a track's tags broke ffmpeg's filter and stopped the stream. Overlay text is now passed to ffmpeg through a temp file, so any text works.
-- **Skipping can't crash the stream.** A skipped track's ffmpeg could report its (expected) kill after the next track had started, which was taken as the new track failing and shut the whole station down.
-- **Works with current ffmpeg and Node.** ffmpeg is run directly (fluent-ffmpeg is no longer maintained, and couldn't read newer ffmpeg's format list), and font paths work on Windows.
-- **Reverse proxy configs** for Caddy and nginx, and `api.trust_proxy`.
-- **The stream key stays out of the logs.** It is replaced with `<stream_key>` in log output, since the log is visible in the web console.
-- **API keys are compared in constant time.**
-- **The station keeps running when a track fails.** An ffmpeg error, the stream server dropping the connection, an unreadable file or an empty folder used to exit the whole process. The next track is now tried after 2 seconds, waiting up to a minute while it keeps failing, and the api and console stay up.
-- **A broken config edit doesn't stop the stream.** If `config.json` (or `config.js`) stops loading, the last config that worked is used until it's fixed. `PUT` / `POST /config` refuse configs the stream can't run, and write `config.json` atomically.
-- **Songs play at full volume.** Mixing in the silent track halved the song's volume (-6 dB) unless `normalize_audio` was on.
-- **Several stream outputs at once.** `stream_outputs` can list several URLs, and all of them are used (before, only the first was).
-- **Quick skips can't leave two ffmpegs running.** Stopping or skipping right after a track started could crash, or leave an ffmpeg streaming that nothing tracked.
-- **History keeps the newest tracks.** After 100 tracks, history kept only the first track ever played, and showed it as playing now.
-- **Every generated project gets its own api key**, instead of the shared `super-secret-api-key`, which is refused when the api can be reached from other computers.
-- **Absolute project folders work**, e.g. `podcast-radio /srv/radio`.
-- **Renamed to `podcast-radio`.** The command, package and repository are now `podcast-radio`. `live-stream-radio` still works as a second name for the command, so existing services don't need changing.
-- **Podcast feeds.** Paste a podcast's RSS feed into the console and new episodes download on their own (checked hourly) into a folder for the show, where they join the rotation. The newest 10 are kept by default; older downloads are removed, never your own files or the episode playing. See `podcasts` in the [config docs](./src/generate/config.mdx).
-- **No repeats.** Episodes are shuffled so every one plays once before any repeats (`play_order`), or can play in order by file name, and a restart carries on the same round. Before, each track was picked at random, so the same one could play twice in a row.
-- **More audio formats** (`.m4a`, `.aac`, `.ogg`, `.opus`), extensions in any case, and folders are scanned once a minute rather than for every track.
-- **Gifs are converted once** and reused, and temp files are cleaned up.
-- **Current dependencies, no known vulnerabilities.** fastify 5, music-metadata 11 and the rest are up to date (`npm audit` is clean), and chalk, find, upath, is-running, imagemin and fluent-ffmpeg are replaced by Node built-ins or a few lines of code. Needs Node 22 or newer.
-- **Tests** (`npm test`) and CI.
-
-# API Frontends
-
-_For building your own API frontend, please see the [API Documentation](./src/api/endpoints.mdx) 📚 on API Endpoints._
-
-This fork includes one: the [web console](#web-console) at `/console`. Other frontends are welcome too! If you make a `podcast-radio` frontend, please open an issue and so we can add the project here 😄!
-
-# Other Notable Projects
-
-These were built for the original `live-stream-radio`, and its API is unchanged.
-
-- [live-stream-radio control](https://github.com/BaileyMcKelway/live-stream-radio-api-frontend) - Web control for `live-stream-radio` for streams on Twitch.
-- [lsr-wrapper](https://github.com/LSRemote/lsr-wrapper) - A Promise based wrapper around the `live-stream-radio` api.
-- [live-stream-radio-cp](https://github.com/Tresmos/live-stream-radio-cp) - Simple web control panel for live-stream-radio.
-
-# Streams built with `podcast-radio`
-
-Please feel free to share your stream if you are using `podcast-radio`. Just open an issue, and we can add it to the README. 😄
-
-# Compatibility
-
-Currently, this should work under any OS with support for [Node](https://nodejs.org/en/) 22 or newer and [FFMPEG](https://www.ffmpeg.org/) (tested with ffmpeg 9). Specifically in the tradition of this project being developed for Raspberry Pi, formerly as piStreamRadio , this also supports Raspbian as well.
-
-# Example Assets from the `--generate` template
-
-Music is by [Aviscerall](https://aviscerall.bandcamp.com/), and [Marquice Turner](https://marquiceturner.bandcamp.com/). Which is actually me (@torch2424), but I have a musical identitiy problem 😛 . The .mp4 and .webm of the rotating earth, is a [public domain video I found on Youtube](https://www.youtube.com/watch?v=uuY1RXZyUFs). The image overlay uses images from EmojiOne, in particular, their [video camera emoji](https://www.emojione.com/emoji/1f4f9), and their [radio emoji](https://www.emojione.com/emoji/1f4fb).
-
-# Contributing
-
-Feel free to fork the project, open up a PR, and give any contributions! I'd suggest opening an issue first however, just so everyone is aware and can discuss the proposed changes. 👍
-
-# License
-
-LICENSE under [Apache 2.0](https://choosealicense.com/licenses/apache-2.0/). 🐦
-
-This software uses code of [FFmpeg](http://ffmpeg.org) licensed under the [LGPLv2.1](http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html) and it's source can be downloaded [here](./deps/ffmpeg).
-
-As such, this software tries to respect the LGPLv2 License as close as possible to respect FFmpeg and it's authors. Huge shoutout to them for building such an awesome and crazy tool!
+[Apache 2.0](LICENSE). podcast-radio runs [FFmpeg](https://ffmpeg.org/), which is licensed separately under the LGPL or GPL depending on how it was built ([FFmpeg's license page](https://ffmpeg.org/legal.html)). The sample media in generated projects is credited in the [FAQ](docs/faq.md#where-does-the-sample-media-come-from).
